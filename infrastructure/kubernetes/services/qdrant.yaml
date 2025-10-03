@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qdrant-storage
+  namespace: a0-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qdrant
+  namespace: a0-dev
+spec:
+  serviceName: qdrant
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qdrant
+  template:
+    metadata:
+      labels:
+        app: qdrant
+    spec:
+      containers:
+      - name: qdrant
+        image: qdrant/qdrant:latest
+        ports:
+        - containerPort: 6333
+          name: http
+        - containerPort: 6334
+          name: grpc
+        env:
+        - name: QDRANT__SERVICE__GRPC_PORT
+          value: "6334"
+        volumeMounts:
+        - name: storage
+          mountPath: /qdrant/storage
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 6333
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 6333
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: qdrant-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant-service
+  namespace: a0-dev
+  labels:
+    app: qdrant
+spec:
+  selector:
+    app: qdrant
+  ports:
+  - name: http
+    port: 6333
+    targetPort: 6333
+  - name: grpc
+    port: 6334
+    targetPort: 6334
+  type: ClusterIP

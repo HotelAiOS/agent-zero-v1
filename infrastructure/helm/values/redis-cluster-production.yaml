@@ -1,0 +1,37 @@
+cluster:
+  enabled: true
+  nodes: 6
+  replicas: 1
+
+image:
+  registry: docker.io
+  repository: bitnami/redis-cluster
+  tag: 7.2.4-debian-12-r0
+
+auth:
+  enabled: true
+  password: "CHANGE-IN-PRODUCTION"
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+persistence:
+  enabled: true
+  storageClass: "local-path"
+  size: "10Gi"
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+
+updateStrategy:
+  type: RollingUpdate
+
+networkPolicy:
+  enabled: false

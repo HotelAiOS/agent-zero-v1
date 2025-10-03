@@ -1,0 +1,63 @@
+# PostgreSQL HA z Patroni dla PRODUKCJI
+global:
+  postgresql:
+    auth:
+      postgresPassword: "CHANGE-IN-PRODUCTION"
+      username: "a0"
+      password: "CHANGE-IN-PRODUCTION"
+      database: "agentzero"
+      replicationPassword: "CHANGE-IN-PRODUCTION"
+
+postgresql:
+  replicaCount: 3
+  
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql
+    tag: 16.2.0-debian-12-r0
+  
+  patroni:
+    enabled: true
+    
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+  
+  persistence:
+    enabled: true
+    storageClass: "local-path"
+    size: "50Gi"
+
+pgpool:
+  enabled: true
+  replicaCount: 2
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  numInitChildren: 32
+  maxPool: 4
+  childMaxConnections: 5
+  loadBalanceMode: true
+
+persistence:
+  enabled: true
+  storageClass: "local-path"
+  size: "50Gi"
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+
+networkPolicy:
+  enabled: false
