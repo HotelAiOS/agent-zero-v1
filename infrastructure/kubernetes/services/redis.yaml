@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: a0-dev
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    protected-mode no
+    port 6379
+    tcp-backlog 511
+    timeout 0
+    tcp-keepalive 300
+    daemonize no
+    pidfile /var/run/redis.pid
+    loglevel notice
+    databases 16
+    save 900 1
+    save 300 10
+    save 60 10000
+    stop-writes-on-bgsave-error yes
+    rdbcompression yes
+    rdbchecksum yes
+    dbfilename dump.rdb
+    dir /data
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: a0-dev
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        command:
+        - redis-server
+        - /etc/redis/redis.conf
+        - --requirepass
+        - redis-dev-secure-password
+        ports:
+        - containerPort: 6379
+          name: redis
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: config
+          mountPath: /etc/redis
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - -a
+            - redis-dev-secure-password
+            - ping
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - -a
+            - redis-dev-secure-password
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: redis-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "local-path"
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cluster
+  namespace: a0-dev
+  labels:
+    app: redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  type: ClusterIP

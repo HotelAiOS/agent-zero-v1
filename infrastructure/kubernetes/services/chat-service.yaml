@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+  namespace: a0-dev
+  labels:
+    app: chat-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-service
+  template:
+    metadata:
+      labels:
+        app: chat-service
+    spec:
+      serviceAccountName: agent-zero-sa
+      containers:
+      - name: chat-service
+        image: agent-zero/chat-service:1.0.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+          name: http
+        env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: a0-config
+              key: LOG_LEVEL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: a0-config
+              key: REDIS_URL
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: a0-secrets
+              key: REDIS_PASSWORD
+        - name: AI_ROUTER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: a0-config
+              key: AI_ROUTER_URL
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: a0-secrets
+              key: DATABASE_URL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-service
+  namespace: a0-dev
+  labels:
+    app: chat-service
+spec:
+  selector:
+    app: chat-service
+  ports:
+  - port: 8001
+    targetPort: 8001
+    protocol: TCP
+    name: http
+  type: ClusterIP

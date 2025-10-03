@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent-zero-sa
+  namespace: a0-dev
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agent-zero-role
+  namespace: a0-dev
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent-zero-binding
+  namespace: a0-dev
+subjects:
+- kind: ServiceAccount
+  name: agent-zero-sa
+  namespace: a0-dev
+roleRef:
+  kind: Role
+  name: agent-zero-role
+  apiGroup: rbac.authorization.k8s.io

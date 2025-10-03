@@ -1,0 +1,133 @@
+# AI Router - tylko od API Gateway i Chat Service
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-router-policy
+  namespace: a0-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: ai-router
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    - podSelector:
+        matchLabels:
+          app: chat-service
+    - podSelector:
+        matchLabels:
+          app: agent-orchestrator
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: ollama
+    ports:
+    - protocol: TCP
+      port: 11434
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443  # External APIs (Claude, OpenAI)
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53  # DNS
+---
+# Chat Service - tylko od API Gateway
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chat-service-policy
+  namespace: a0-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: chat-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8001
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - podSelector:
+        matchLabels:
+          app: ai-router
+    ports:
+    - protocol: TCP
+      port: 8000
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+---
+# PostgreSQL - tylko od autoryzowanych serwisów
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgresql-policy
+  namespace: a0-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: postgresql
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: chat-service
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+# Redis - tylko od Chat Service
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-policy
+  namespace: a0-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: chat-service
+    ports:
+    - protocol: TCP
+      port: 6379

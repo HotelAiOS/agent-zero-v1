@@ -1,0 +1,50 @@
+{
+  "dashboard": {
+    "title": "Agent Zero Monitoring",
+    "tags": ["agent-zero", "ai"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Requests",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(ai_router_requests_total)",
+            "legendFormat": "Total"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Requests Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ai_router_requests_total[1m])",
+            "legendFormat": "{{endpoint}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 3,
+        "title": "Tokens Used",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(ai_router_tokens_total)",
+            "legendFormat": "Tokens"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+      }
+    ],
+    "refresh": "5s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}
