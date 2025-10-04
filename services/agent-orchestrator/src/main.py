@@ -1,30 +1,37 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+"""
+Agent Orchestrator Service - Main Application
+Coordinates multiple AI agents for different tasks
+"""
 import logging
 import os
-from typing import Dict, Any, List
 import psycopg2
+from psycopg2.extras import RealDictCursor
+from datetime import datetime
+import uuid
+from typing import Dict, Any, Optional
 
-from .swarm.coordinator import SwarmCoordinator
-from .agents.base_agent import AgentTask, TaskStatus
-from .models.schemas import TaskRequest, TaskResponse, WorkflowRequest
-from .agents.dynamic_agent import DynamicAgent
+from fastapi import FastAPI, HTTPException, Body
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-# Logging
+from swarm.coordinator import AgentCoordinator
+from models.schemas import TaskRequest, TaskResponse
+
+# Configure logging
 logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# FastAPI app
+# Initialize FastAPI app
 app = FastAPI(
-    title="Agent Zero Orchestrator",
-    version="1.0.0",
-    description="Multi-Agent Swarm Orchestration System"
+    title="Agent Orchestrator",
+    description="AI Agent coordination and task execution service",
+    version="1.0.2"
 )
 
-# CORS
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,215 +40,195 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Coordinator
-AI_ROUTER_URL = os.getenv("AI_ROUTER_URL", "http://ai-router-service:8000")
-coordinator = SwarmCoordinator(ai_router_url=AI_ROUTER_URL)
-
-# Database connection
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://a0:a0password@postgresql:5432/agentzero")
+# Initialize Agent Coordinator
+coordinator = AgentCoordinator()
 
 def get_db_connection():
-    """Uzyskaj połączenie do bazy danych"""
-    return psycopg2.connect(DATABASE_URL)
-
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {"message": "Agent Zero Orchestrator v1.0.0"}
+    """Get PostgreSQL database connection."""
+    db_url = os.getenv('DATABASE_URL', 'postgresql://a0:a0dev@postgresql:5432/agentzero')
+    try:
+        return psycopg2.connect(db_url)
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
 
 @app.get("/health")
-async def health():
-    """Health check"""
+async def health_check():
+    """Health check endpoint."""
     return {
         "status": "healthy",
-        "version": "1.0.0",
+        "service": "agent-orchestrator",
+        "version": "1.0.2",
         "agents": len(coordinator.agents)
     }
 
-@app.get("/agents/")
-async def list_agents():
-    """Lista wszystkich agentów"""
-    agents = []
-    for name, agent in coordinator.agents.items():
-        agents.append({
-            "name": name,
-            "capabilities": [cap.value for cap in agent.capabilities]
-        })
-    return {"agents": agents}
-
-@app.post("/task", response_model=TaskResponse)
-async def create_task(request: TaskRequest):
-    """Wykonaj zadanie przez agenta"""
+@app.post("/agents/task")
+async def execute_task(task: TaskRequest):
+    """Execute task using appropriate agent."""
     try:
-        logger.info(f"Received task: {request.type}")
+        logger.info(f"Received task: {task.task_type} - {task.description[:50]}...")
         
-        task = AgentTask(
-            type=request.type,
-            description=request.description,
-            input_data=request.input_data
+        # Execute task through coordinator
+        result = await coordinator.execute_task(
+            task_type=task.task_type,
+            description=task.description,
+            context=task.context or {}
         )
-        
-        result = await coordinator.execute_task(task)
         
         return TaskResponse(
-            task_id=result.id,
-            status=result.status.value,
-            result=result.result,
-            error=result.error
+            task_id=str(uuid.uuid4()),
+            status="completed",
+            result=result,
+            agent_used=task.task_type
         )
-        
     except Exception as e:
-        logger.error(f"Task execution failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/workflow/{workflow_name}")
-async def execute_workflow(workflow_name: str, description: str, language: str = "python"):
-    """Wykonaj workflow"""
-    try:
-        logger.info(f"Executing workflow: {workflow_name}")
-        
-        if workflow_name == "code-to-production":
-            result = await coordinator.code_to_production_workflow(
-                description=description,
-                language=language
-            )
-            return result
-        else:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-            
-    except Exception as e:
-        logger.error(f"Workflow execution failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/agents/create")
-async def create_custom_agent(agent_data: Dict[str, Any]):
-    """
-    Utwórz nowego custom agenta
-    
-    Body:
-    {
-        "name": "MyAgent",
-        "description": "My custom agent",
-        "system_prompt": "You are...",
-        "capabilities": ["capability1"],
-        "model_preference": "llama3.2:3b",
-        "temperature": 0.7
-    }
-    """
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            INSERT INTO custom_agents 
-            (name, description, system_prompt, capabilities, model_preference, temperature, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id, name
-        """, (
-            agent_data['name'],
-            agent_data.get('description', ''),
-            agent_data['system_prompt'],
-            agent_data.get('capabilities', []),
-            agent_data.get('model_preference', 'auto'),
-            agent_data.get('temperature', 0.7),
-            agent_data.get('created_by', 'api')
-        ))
-        
-        agent_id, agent_name = cursor.fetchone()
-        conn.commit()
-        
-        # Dodaj do coordinator jako dynamic agent
-        dynamic_agent = DynamicAgent(
-            name=agent_name,
-            system_prompt=agent_data['system_prompt'],
-            capabilities=agent_data.get('capabilities', []),
-            ai_router_url=coordinator.ai_router_url,
-            model_preference=agent_data.get('model_preference', 'auto'),
-            temperature=agent_data.get('temperature', 0.7)
-        )
-        
-        coordinator.agents[agent_name] = dynamic_agent
-        
-        cursor.close()
-        conn.close()
-        
-        logger.info(f"Created custom agent: {agent_name}")
-        
-        return {
-            "id": str(agent_id),
-            "name": agent_name,
-            "status": "created",
-            "message": f"Agent {agent_name} successfully created and loaded"
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to create agent: {e}")
+        logger.error(f"Task execution error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/agents/custom")
 async def list_custom_agents():
-    """Lista wszystkich custom agentów"""
+    """List all custom agents from database."""
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        cursor.execute("""
-            SELECT id, name, description, capabilities, is_active, created_at
+        cur.execute("""
+            SELECT id, name, description, system_prompt, 
+                   capabilities, model_preference, is_active, 
+                   created_at, updated_at
             FROM custom_agents
             WHERE is_active = true
             ORDER BY created_at DESC
         """)
         
-        agents = []
-        for row in cursor.fetchall():
-            agents.append({
-                "id": str(row[0]),
-                "name": row[1],
-                "description": row[2],
-                "capabilities": row[3],
-                "is_active": row[4],
-                "created_at": str(row[5])
-            })
-        
-        cursor.close()
+        agents = cur.fetchall()
+        cur.close()
         conn.close()
         
-        return {"custom_agents": agents}
+        # Convert to list of dicts
+        agents_list = [dict(agent) for agent in agents]
+        
+        logger.info(f"Retrieved {len(agents_list)} custom agents")
+        return {"custom_agents": agents_list}
         
     except Exception as e:
         logger.error(f"Failed to list agents: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/agents/custom/{agent_name}")
-async def delete_custom_agent(agent_name: str):
-    """Usuń custom agenta"""
+@app.post("/agents/create")
+async def create_custom_agent(request: Dict[str, Any] = Body(...)):
+    """
+    Create new custom agent.
+    
+    Expected request body:
+    {
+        "name": "AgentName",
+        "description": "Agent description",
+        "prompt_template": "System prompt template",
+        "model": "llama3.2:3b"  (optional)
+    }
+    """
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cur = conn.cursor()
         
-        cursor.execute("""
-            UPDATE custom_agents SET is_active = false
-            WHERE name = %s
-            RETURNING id
-        """, (agent_name,))
+        # Generate unique ID
+        agent_id = str(uuid.uuid4())
         
-        result = cursor.fetchone()
+        # Extract fields from request
+        name = request.get('name')
+        description = request.get('description')
+        
+        # MAP: prompt_template -> system_prompt (FIX for KeyError)
+        system_prompt = request.get('prompt_template', request.get('system_prompt', ''))
+        
+        # Optional fields
+        model_preference = request.get('model', 'llama3.2:3b')
+        capabilities = request.get('capabilities', ['custom'])
+        
+        # Validate required fields
+        if not name or not description:
+            raise HTTPException(
+                status_code=400, 
+                detail="Missing required fields: name, description"
+            )
+        
+        if not system_prompt:
+            raise HTTPException(
+                status_code=400,
+                detail="Missing required field: prompt_template or system_prompt"
+            )
+        
+        # Insert into database
+        cur.execute("""
+            INSERT INTO custom_agents (
+                id, name, description, system_prompt, 
+                capabilities, model_preference, is_active
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, true)
+            RETURNING id, name
+        """, (
+            agent_id,
+            name,
+            description,
+            system_prompt,
+            capabilities,
+            model_preference
+        ))
+        
         conn.commit()
-        cursor.close()
+        result = cur.fetchone()
+        cur.close()
         conn.close()
         
-        if result:
-            # Usuń z coordinator
-            if agent_name in coordinator.agents:
-                del coordinator.agents[agent_name]
-            
-            return {"message": f"Agent {agent_name} deactivated"}
-        else:
-            raise HTTPException(status_code=404, detail="Agent not found")
+        logger.info(f"Created custom agent: {name} (ID: {agent_id})")
         
+        return {
+            "agent_id": result[0],
+            "name": result[1],
+            "status": "created",
+            "message": f"Agent '{result[1]}' created successfully"
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to delete agent: {e}")
+        logger.error(f"Failed to create agent: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/agents/list")
+async def list_available_agents():
+    """List all available agent types."""
+    return {
+        "agents": [
+            {
+                "type": "code",
+                "name": "Code Agent",
+                "description": "Generates and analyzes code"
+            },
+            {
+                "type": "test",
+                "name": "Test Agent",
+                "description": "Creates test cases and validates code"
+            },
+            {
+                "type": "docs",
+                "name": "Documentation Agent",
+                "description": "Generates documentation"
+            }
+        ]
+    }
+
+@app.get("/agents/status")
+async def get_agents_status():
+    """Get status of all agents."""
+    return {
+        "coordinator": "running",
+        "agents": coordinator.agents,
+        "total_agents": len(coordinator.agents)
+    }
 
 if __name__ == "__main__":
     import uvicorn
