@@ -1,0 +1,52 @@
+version: "3.8"
+services:
+  # Existing services (agent-orchestrator, ai-router)
+  agent-orchestrator:
+    build: ./services/agent-orchestrator
+    ports: ["8001:8001"]
+    depends_on: [postgres, rabbitmq]
+    environment:
+      - DATABASE_URL=postgresql://postgres:agent-pass@postgres:5432/agent_zero
+      - RABBITMQ_URL=amqp://agent:agent-pass@rabbitmq:5672/
+
+  ai-router:
+    build: ./services/ai-router  
+    ports: ["8002:8002"]
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+  # Multi-Agent Infrastructure
+  postgres:
+    image: postgres:16-alpine
+    ports: ["5433:5432"]
+    environment:
+      POSTGRES_DB: agent_zero
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: agent-pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/database:/docker-entrypoint-initdb.d
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports: ["5672:5672", "15672:15672"]
+    environment:
+      RABBITMQ_DEFAULT_USER: agent
+      RABBITMQ_DEFAULT_PASS: agent-pass
+    volumes: [rabbitmq_data:/var/lib/rabbitmq]
+
+  neo4j:
+    image: neo4j:5-community
+    ports: ["7474:7474", "7687:7687"]
+    environment:
+      NEO4J_AUTH: neo4j/agent-pass
+    volumes: [neo4j_data:/data]
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  neo4j_data:
+
+networks:
+  default:
+    name: agent-zero-network
