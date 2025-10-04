@@ -28,12 +28,12 @@ class AIBrain:
 
         try:
             logger.info(f"🧠 Thinking with {selected_model}...")
-            response = ollama.chat(selected_model, [{"role": "user", "content": task}])
+            response = ollama.chat(selected_model, [{"role": "user", "content": task}], timeout=None)
             end_time = asyncio.get_event_loop().time()
             processing_time = end_time - start_time
 
             if "error" in response:
-                response = ollama.chat("phi3:mini", [{"role": "user", "content": task}])
+                response = ollama.chat("phi3:mini", [{"role": "user", "content": task}], timeout=None)
                 selected_model = "phi3:mini"
 
             response_text = response["message"]["content"]

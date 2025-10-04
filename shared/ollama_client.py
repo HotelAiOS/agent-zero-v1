@@ -16,7 +16,7 @@ class SystemOllamaClient:
         """Get available ollama models from system"""
         try:
             result = subprocess.run(['ollama', 'list'], 
-                                  capture_output=True, text=True, timeout=10)
+                                  capture_output=True, text=True, timeout=30)
             if result.returncode == 0:
                 lines = result.stdout.strip().split('\n')[1:]  # Skip header
                 models = []
@@ -31,7 +31,7 @@ class SystemOllamaClient:
         return []
     
     def chat(self, model: str, messages: List[Dict[str, str]], 
-             timeout: int = 60) -> Dict[str, Any]:
+             timeout: int = None) -> Dict[str, Any]:
         """Chat with ollama model via system call"""
         
         if model not in self.available_models:
