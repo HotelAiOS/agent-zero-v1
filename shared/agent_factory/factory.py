@@ -69,7 +69,8 @@ class AgentFactory:
         self.templates_dir = Path(templates_dir)
         self.templates: Dict[str, AgentTemplate] = {}
         self.capability_matcher = capability_matcher or CapabilityMatcher()
-        self.lifecycle_manager = lifecycle_manager or AgentLifecycleManager()
+
+        self.lifecycle_manager = lifecycle_manager or AgentLifecycleManager(enable_messaging=True)
         
         # NOWE: Inicjalizuj LLM client
         self.llm_client = llm_client or OllamaClient(
