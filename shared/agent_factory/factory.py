@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 import logging
+import sys
+
+# NOWE: Import OllamaClient
+sys.path.append(str(Path(__file__).parent.parent))
+from llm.ollama_client import OllamaClient
 
 from .capabilities import (
     AgentCapability, 
@@ -48,13 +53,15 @@ class AgentFactory:
         self, 
         templates_dir: Optional[Path] = None,
         capability_matcher: Optional[CapabilityMatcher] = None,
-        lifecycle_manager: Optional[AgentLifecycleManager] = None
+        lifecycle_manager: Optional[AgentLifecycleManager] = None,
+        llm_client: Optional[OllamaClient] = None  # NOWE!
     ):
         """
         Args:
             templates_dir: Katalog z YAML templates (domyślnie ./templates/)
             capability_matcher: Opcjonalny matcher capabilities
             lifecycle_manager: Opcjonalny lifecycle manager
+            llm_client: Opcjonalny LLM client (tworzy nowy jeśli None)
         """
         if templates_dir is None:
             templates_dir = Path(__file__).parent / "templates"
@@ -63,6 +70,11 @@ class AgentFactory:
         self.templates: Dict[str, AgentTemplate] = {}
         self.capability_matcher = capability_matcher or CapabilityMatcher()
         self.lifecycle_manager = lifecycle_manager or AgentLifecycleManager()
+        
+        # NOWE: Inicjalizuj LLM client
+        self.llm_client = llm_client or OllamaClient(
+            config_path=str(Path(__file__).parent.parent / "llm" / "config.yaml")
+        )
         
         # Załaduj templates przy inicjalizacji
         self._load_templates()
@@ -175,6 +187,10 @@ class AgentFactory:
         
         # Utwórz instancję w lifecycle manager
         agent = self.lifecycle_manager.create_agent(agent_id, agent_type)
+        
+        # NOWE: Przypisz LLM client do agenta
+        agent.llm_client = self.llm_client
+        agent.template = template
         
         # Parsuj i zarejestruj capabilities
         capabilities = self._parse_capabilities(template.capabilities)

@@ -4,10 +4,18 @@ Zarządzanie cyklem życia agentów
 """
 
 from enum import Enum
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from datetime import datetime
 from dataclasses import dataclass, field
 import logging
+import time
+import sys
+from pathlib import Path
+
+# Import dla LLM
+sys.path.append(str(Path(__file__).parent.parent))
+from llm.prompt_builder import PromptBuilder, PromptContext
+from llm.response_parser import ResponseParser
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -58,9 +66,101 @@ class AgentInstance:
     current_task: Optional[str] = None
     error_message: Optional[str] = None
     
+    # NOWE: Pola dla LLM
+    llm_client: Any = None
+    template: Any = None
+    
     def mark_active(self):
         """Oznacz agenta jako aktywnego"""
         self.metrics.last_active = datetime.now()
+    
+    def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Wykonaj zadanie używając LLM
+        
+        Args:
+            task: Dict z opisem zadania:
+                - description: str - opis zadania
+                - name: str - nazwa zadania (opcjonalny)
+                - context: Dict[str, Any] - kontekst (opcjonalny)
+                - tech_stack: List[str] - stack technologiczny (opcjonalny)
+                - requirements: List[str] - wymagania (opcjonalny)
+        
+        Returns:
+            Dict z wynikiem:
+                - success: bool
+                - output: str - wygenerowany kod/wynik
+                - raw_response: str - pełna odpowiedź LLM
+                - error: str - komunikat błędu (jeśli failed)
+                - tokens_used: int
+                - response_time: float
+        """
+        if self.llm_client is None:
+            logger.error(f"Agent {self.agent_id}: brak LLM client")
+            return {
+                'success': False,
+                'error': 'LLM client not initialized',
+                'output': None
+            }
+        
+        start_time = time.time()
+        
+        try:
+            # Zbuduj context dla promptu
+            context = PromptContext(
+                agent_type=self.agent_type,
+                task_name=task.get('name', 'Task'),
+                task_description=task.get('description', ''),
+                tech_stack=task.get('tech_stack', []),
+                requirements=task.get('requirements', []),
+                context=task.get('context', {})
+            )
+            
+            # Zbuduj prompt
+            messages = PromptBuilder.build_task_prompt(context)
+            
+            logger.info(f"Agent {self.agent_id}: wykonuje zadanie...")
+            
+            # Wywołaj LLM
+            response = self.llm_client.chat(
+                messages=messages,
+                agent_type=self.agent_type
+            )
+            
+            # Parsuj odpowiedź
+            response_text = response.get('message', {}).get('content', '')
+            code = ResponseParser.extract_first_code_block(response_text)
+            
+            # Oblicz metryki
+            response_time = time.time() - start_time
+            tokens_used = response.get('eval_count', 0) + response.get('prompt_eval_count', 0)
+            
+            result = {
+                'success': True,
+                'output': code or response_text,
+                'raw_response': response_text,
+                'tokens_used': tokens_used,
+                'response_time': response_time
+            }
+            
+            logger.info(
+                f"Agent {self.agent_id}: zadanie wykonane "
+                f"({tokens_used} tokens, {response_time:.2f}s)"
+            )
+            
+            return result
+            
+        except Exception as e:
+            response_time = time.time() - start_time
+            logger.error(f"Agent {self.agent_id}: błąd wykonania zadania: {e}")
+            
+            return {
+                'success': False,
+                'error': str(e),
+                'output': None,
+                'response_time': response_time,
+                'tokens_used': 0
+            }
 
 
 class AgentLifecycleManager:

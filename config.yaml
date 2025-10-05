@@ -1,0 +1,61 @@
+# Agent Zero V1 - Multi-Model Configuration
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  
+  default:
+    temperature: 0.7
+    num_ctx: 8192
+    num_predict: 4096
+  
+  agents:
+    architect:
+      model: "qwen2.5:14b"
+      temperature: 0.6
+      num_ctx: 12288
+      
+    backend:
+      model: "deepseek-coder:33b"
+      temperature: 0.5
+      num_ctx: 16384
+      
+    frontend:
+      model: "llama3.2:latest"
+      temperature: 0.7
+      num_ctx: 8192
+      
+    database:
+      model: "qwen3:14b"
+      temperature: 0.5
+      num_ctx: 8192
+      
+    devops:
+      model: "codellama:13b"
+      temperature: 0.6
+      num_ctx: 8192
+      
+    security:
+      model: "deepseek-r1:32b"
+      temperature: 0.4
+      num_ctx: 16384
+      
+    tester:
+      model: "mistral:7b"
+      temperature: 0.7
+      num_ctx: 8192
+      
+    performance:
+      model: "solar:10.7b"
+      temperature: 0.6
+      num_ctx: 8192
+  
+  protocols:
+    code_review:
+      model: "deepseek-r1:14b"
+      temperature: 0.5
+      num_ctx: 12288
+      
+    problem_solving:
+      model: "mixtral:8x7b"
+      temperature: 0.8
+      num_ctx: 16384
