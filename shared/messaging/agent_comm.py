@@ -38,9 +38,14 @@ class AgentCommunicator:
             auto_connect: Czy automatycznie połączyć z RabbitMQ
         """
         self.agent_id = agent_id
-        self.bus = MessageBus(bus_config or BusConfig())
-        self.publisher = MessagePublisher(self.bus)
-        self.consumer = MessageConsumer(self.bus, agent_id)
+        config = bus_config or BusConfig()
+        
+        # ZMIANA: Osobne połączenia dla Publisher i Consumer (thread safety)
+        self.bus_publish = MessageBus(config)
+        self.bus_consume = MessageBus(config)
+        
+        self.publisher = MessagePublisher(self.bus_publish)
+        self.consumer = MessageConsumer(self.bus_consume, agent_id)
         
         if auto_connect:
             self.connect()
@@ -54,12 +59,14 @@ class AgentCommunicator:
         Returns:
             True jeśli sukces
         """
-        # Połącz z RabbitMQ
-        if not self.bus.connect():
+        # Połącz oba połączenia
+        if not self.bus_publish.connect():
+            return False
+        if not self.bus_consume.connect():
             return False
         
-        # Zadeklaruj exchange
-        self.bus.declare_exchange("agent_exchange", "topic", durable=True)
+        # Zadeklaruj exchange (wystarczy raz)
+        self.bus_publish.declare_exchange("agent_exchange", "topic", durable=True)
         
         # Skonfiguruj kolejkę dla agenta
         self.consumer.setup_queue(
@@ -69,7 +76,7 @@ class AgentCommunicator:
                 "broadcast.all",
                 f"broadcast.project.*",
                 "*.urgent.*",
-                f"team.*",  # Wszystkie wiadomości teamowe
+                f"team.*",
             ]
         )
         
@@ -79,7 +86,8 @@ class AgentCommunicator:
     def disconnect(self):
         """Rozłącz z RabbitMQ"""
         self.consumer.stop_consuming()
-        self.bus.disconnect()
+        self.bus_consume.disconnect()
+        self.bus_publish.disconnect()
         logger.info(f"{self.agent_id} rozłączony")
     
     # === WYSYŁANIE WIADOMOŚCI ===
