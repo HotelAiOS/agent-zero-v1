@@ -1,13 +1,6 @@
 """
-RabbitMQ Message Bus - Async komunikacja między agentami
-
-PRODUCTION GRADE - Obsługuje długotrwałe operacje (AI generacja kodu)
-
-Zmiany vs poprzednia wersja:
-- Heartbeat 3600s (1 godzina) zamiast domyślnych 600s
-- Robust connection z auto-reconnect
-- Connection keepalive
-- Timeout handling dla długich operacji
+Bus wiadomości RabbitMQ
+Obsługa automatycznych retry i reconnect - odporność na timeouty i zamknięcia kanału.
 """
 import asyncio
 import logging
@@ -16,21 +9,15 @@ from typing import Dict, Any, Callable, Optional
 import aio_pika
 from aio_pika import Message, ExchangeType
 from aio_pika.abc import AbstractRobustConnection
+import aiormq
 
 logger = logging.getLogger(__name__)
 
-
 class MessageBus:
     """
-    RabbitMQ Message Bus z obsługą długotrwałych operacji.
-    
-    Features:
-    - Auto-reconnect po utracie połączenia
-    - Heartbeat 3600s dla długich operacji AI
-    - Topic exchange dla routingu agentów
-    - Persistent messages
+    Komunikacja RabbitMQ z automatycznym retry, reconnect i obsługą długich operacji.
     """
-    
+
     def __init__(
         self,
         host: str = "localhost",
@@ -39,227 +26,158 @@ class MessageBus:
         password: str = "agent-pass",
         exchange_name: str = "agent_exchange"
     ):
-        """
-        Inicjalizacja message bus.
-        
-        Args:
-            host: RabbitMQ host
-            port: RabbitMQ port
-            username: Użytkownik RabbitMQ
-            password: Hasło RabbitMQ
-            exchange_name: Nazwa exchange (topic)
-        """
         self.host = host
         self.port = port
         self.username = username
         self.password = password
         self.exchange_name = exchange_name
-        
+
         self.connection: Optional[AbstractRobustConnection] = None
         self.channel = None
         self.exchange = None
         self._is_connected = False
-        
+
     async def connect(self):
         """
-        Połącz z RabbitMQ z robust connection.
-        
-        Robust connection automatycznie reconnectuje przy utracie połączenia.
-        Heartbeat 3600s pozwala na długie operacje (AI generation 20+ minut).
+        Połączenie do RabbitMQ. Automatycznie próbuje połączenie do skutku.
+        Heartbeat 3600s – obsługa długich operacji AI.
         """
         if self._is_connected:
-            logger.info("Already connected to RabbitMQ")
+            logger.info("Już połączone z RabbitMQ")
             return
-        
-        try:
-            # Robust connection z długim heartbeat
-            self.connection = await aio_pika.connect_robust(
-                host=self.host,
-                port=self.port,
-                login=self.username,
-                password=self.password,
-                heartbeat=3600,  # 1 godzina heartbeat dla długich AI operacji
-                connection_attempts=5,  # 5 prób połączenia
-                retry_delay=3.0,  # 3s między próbami
-            )
-            
-            # Utwórz channel
-            self.channel = await self.connection.channel()
-            
-            # Ustaw QoS - max 10 nieprzetworzonych wiadomości
-            await self.channel.set_qos(prefetch_count=10)
-            
-            # Declare exchange (topic - routing przez pattern)
-            self.exchange = await self.channel.declare_exchange(
-                self.exchange_name,
-                ExchangeType.TOPIC,
-                durable=True  # Przetrwa restart RabbitMQ
-            )
-            
-            self._is_connected = True
-            logger.info("✅ Connected to RabbitMQ - Agent Communication Ready")
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to connect to RabbitMQ: {e}")
-            raise
-    
+
+        for attempt in range(5):
+            try:
+                self.connection = await aio_pika.connect_robust(
+                    host=self.host,
+                    port=self.port,
+                    login=self.username,
+                    password=self.password,
+                    heartbeat=3600,
+                    connection_attempts=5,
+                    retry_delay=3.0,
+                )
+                self.channel = await self.connection.channel()
+                await self.channel.set_qos(prefetch_count=10)
+                self.exchange = await self.channel.declare_exchange(
+                    self.exchange_name,
+                    ExchangeType.TOPIC,
+                    durable=True
+                )
+                self._is_connected = True
+                logger.info("✅ Połączono z RabbitMQ")
+                return
+            except Exception as e:
+                logger.error(f"❌ Próba {attempt+1}/5: Błąd połączenia RabbitMQ: {e}")
+                await asyncio.sleep(2)
+        raise RuntimeError("Nie udało się połączyć z RabbitMQ po 5 próbach")
+
     async def publish(self, routing_key: str, message: Dict[str, Any]):
         """
-        Opublikuj wiadomość na exchange.
-        
-        Args:
-            routing_key: Routing key (np. "agent.backend.001.task")
-            message: Dict z danymi (będzie serializowany do JSON)
-            
-        Example:
-            >>> await bus.publish(
-            ...     "agent.backend.001.task",
-            ...     {"type": "task", "data": {"work": "code"}}
-            ... )
+        Publikacja wiadomości z retry/reconnect. Obsługa zamkniętych kanałów!
         """
-        if not self._is_connected:
-            await self.connect()
-        
-        try:
-            # Serializuj do JSON
-            body = json.dumps(message).encode()
-            
-            # Stwórz message (persistent)
-            msg = Message(
-                body,
-                delivery_mode=aio_pika.DeliveryMode.PERSISTENT  # Przetrwa restart
-            )
-            
-            # Publish
-            await self.exchange.publish(
-                msg,
-                routing_key=routing_key
-            )
-            
-            msg_type = message.get('type', 'unknown')
-            logger.info(f"📤 Published to {routing_key}: {msg_type}")
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to publish message: {e}")
-            # Spróbuj reconnect
-            self._is_connected = False
-            await self.connect()
-            raise
-    
+        max_retries = 5
+        attempt = 0
+
+        while attempt < max_retries:
+            if not self._is_connected:
+                await self.connect()
+            try:
+                body = json.dumps(message).encode()
+                msg = Message(
+                    body,
+                    delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+                )
+                await self.exchange.publish(
+                    msg,
+                    routing_key
+                )
+                msg_type = message.get('type', 'unknown')
+                logger.info(f"📤 Published to {routing_key}: {msg_type}")
+                return
+            except aiormq.exceptions.ChannelInvalidStateError:
+                logger.warning("⚠️ Channel zamknięty: reconnect i retry")
+                self._is_connected = False
+                await self.connect()
+                attempt += 1
+                await asyncio.sleep(1)
+            except Exception as e:
+                logger.error(f"❌ Błąd publish: {e}")
+                attempt += 1
+                await asyncio.sleep(1)
+        raise RuntimeError("Publikacja RabbitMQ nieudana po wielu próbach")
+
     async def subscribe(self, routing_key: str, handler: Callable):
         """
-        Subskrybuj wiadomości z danym routing key.
-        
-        Args:
-            routing_key: Pattern (np. "agent.backend.#" lub "agent.*.001.*")
-            handler: Async funkcja handler(message: Dict)
-            
-        Example:
-            >>> async def my_handler(msg):
-            ...     print(f"Got: {msg}")
-            >>> await bus.subscribe("agent.backend.#", my_handler)
+        Subskrypcja do patternu – obsługa reconnect przy błędzie.
         """
         if not self._is_connected:
             await self.connect()
-        
-        try:
-            # Stwórz unikalną nazwę kolejki
-            queue_name = f"agent_{routing_key.replace('.', '_').replace('*', 'all')}"
-            
-            # Declare queue (durable)
-            queue = await self.channel.declare_queue(
-                queue_name,
-                durable=True,
-                auto_delete=False  # Nie usuwaj po disconnect
-            )
-            
-            # Bind do exchange z routing key
-            await queue.bind(self.exchange, routing_key)
-            
-            # Wrapper dla handlera
-            async def _wrapped_handler(message: aio_pika.IncomingMessage):
-                async with message.process():
+
+        queue_name = f"agent_{routing_key.replace('.', '_').replace('*', 'all')}"
+
+        def _is_channel_open():
+            return self.channel and not self.channel.is_closed
+
+        for attempt in range(3):
+            try:
+                queue = await self.channel.declare_queue(
+                    queue_name,
+                    durable=True,
+                    auto_delete=False
+                )
+                await queue.bind(self.exchange, routing_key)
+
+                async def _wrapped_handler(message: aio_pika.IncomingMessage):
                     try:
-                        # Deserializuj JSON
-                        data = json.loads(message.body.decode())
-                        
-                        # Wywołaj user handler
-                        await handler(data)
-                        
-                        logger.info(f"✅ Processed message from {routing_key}")
-                        
-                    except Exception as e:
-                        logger.error(f"❌ Handler error: {e}")
-                        # Message będzie requeued automatycznie
-            
-            # Start consuming
-            await queue.consume(_wrapped_handler)
-            
-            logger.info(f"👂 Subscribed to {routing_key} (queue: {queue_name})")
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to subscribe: {e}")
-            raise
-    
+                        async with message.process():
+                            data = json.loads(message.body.decode())
+                            try:
+                                await handler(data)
+                                logger.info(f"✅ Wiadomość obsłużona: {routing_key}")
+                            except Exception as eh:
+                                logger.error(f"❌ Błąd handlera: {eh}")
+                    except aiormq.exceptions.ChannelInvalidStateError:
+                        logger.warning("⚠️ Channel zamknięty w czasie konsumpcji, reconnect")
+                        self._is_connected = False
+                        await self.connect()
+                        await asyncio.sleep(1)
+                await queue.consume(_wrapped_handler)
+                logger.info(f"👂 Subskrypcja aktywna: {routing_key} (kolejka: {queue_name})")
+                return
+            except aiormq.exceptions.ChannelInvalidStateError:
+                logger.warning("⚠️ Channel zamknięty przy subskrypcji, reconnect")
+                self._is_connected = False
+                await self.connect()
+                await asyncio.sleep(1)
+            except Exception as e:
+                logger.error(f"❌ Błąd subskrypcji: {e}")
+                await asyncio.sleep(1)
+        raise RuntimeError("Subskrypcja do RabbitMQ nieudana po kilku próbach")
+
     async def close(self):
         """
-        Zamknij połączenie z RabbitMQ.
-        
-        Graceful shutdown - poczeka na przetworzenie wiadomości.
+        Zamykaj połączenie (graceful shutdown).
         """
         if self.connection and not self.connection.is_closed:
             await self.connection.close()
             self._is_connected = False
-            logger.info("🔌 Disconnected from RabbitMQ")
+            logger.info("🔌 Rozłączono RabbitMQ")
 
 
-# Singleton instance
+# Singleton
 message_bus = MessageBus()
 
-
-# ============================================================================
-# Helper functions - Convenience wrappers
-# ============================================================================
-
+# Helpery (nie zmieniane)
 async def publish_agent_message(agent_type: str, message_type: str, data: Dict[str, Any]):
-    """
-    Quick publish do wszystkich agentów danego typu.
-    
-    Args:
-        agent_type: Typ agenta (np. "backend", "frontend")
-        message_type: Typ wiadomości (np. "task", "status")
-        data: Dane do wysłania
-        
-    Example:
-        >>> await publish_agent_message(
-        ...     "backend",
-        ...     "task",
-        ...     {"work": "create API"}
-        ... )
-    """
     routing_key = f"agent.{agent_type}.{message_type}"
-    
     message = {
         "type": message_type,
         "data": data,
         "timestamp": asyncio.get_event_loop().time()
     }
-    
     await message_bus.publish(routing_key, message)
 
-
 async def subscribe_to_agent_messages(agent_type: str, handler: Callable):
-    """
-    Quick subscribe do wszystkich wiadomości dla typu agenta.
-    
-    Args:
-        agent_type: Typ agenta (np. "backend")
-        handler: Handler funkcja
-        
-    Example:
-        >>> async def my_handler(msg):
-        ...     print(msg)
-        >>> await subscribe_to_agent_messages("backend", my_handler)
-    """
     routing_key = f"agent.{agent_type}.*"
     await message_bus.subscribe(routing_key, handler)
