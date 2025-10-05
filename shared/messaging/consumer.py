@@ -9,6 +9,7 @@ from typing import Callable, Optional, List
 from .bus import MessageBus
 from .message import Message
 import threading
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ class MessageConsumer:
         self.handlers: List[Callable[[Message], None]] = []
         self._consuming = False
         self._consumer_thread: Optional[threading.Thread] = None
+        self._stop_requested = False
         
         logger.info(f"MessageConsumer zainicjalizowany dla {agent_id}")
     
@@ -156,6 +158,7 @@ class MessageConsumer:
             )
             
             self._consuming = True
+            self._stop_requested = False
             logger.info(f"🎧 Consumer nasłuchuje na {self.queue_name}...")
             
             if block:
@@ -178,17 +181,33 @@ class MessageConsumer:
             self._consuming = False
     
     def stop_consuming(self):
-        """Zatrzymaj nasłuchiwanie"""
-        if not self._consuming:
+        """Zatrzymaj nasłuchiwanie (graceful shutdown)"""
+        if not self._consuming or self._stop_requested:
             return
         
+        self._stop_requested = True
+        
         try:
-            if self.bus.channel:
-                self.bus.channel.stop_consuming()
+            # Poczekaj na zakończenie przetwarzania obecnych wiadomości
+            time.sleep(0.1)
+            
+            # Zatrzymaj consumer
+            if self.bus.channel and self.bus.is_connected():
+                try:
+                    self.bus.channel.stop_consuming()
+                except Exception as e:
+                    logger.debug(f"Consumer już zatrzymany: {e}")
+            
+            # Poczekaj na zakończenie wątku
+            if self._consumer_thread and self._consumer_thread.is_alive():
+                self._consumer_thread.join(timeout=2.0)
+            
             self._consuming = False
             logger.info("Consumer zatrzymany")
+            
         except Exception as e:
-            logger.error(f"Błąd zatrzymywania consumer: {e}")
+            logger.warning(f"Błąd podczas zatrzymywania consumer: {e}")
+            self._consuming = False
     
     def is_consuming(self) -> bool:
         """Sprawdź czy consumer działa"""

@@ -486,11 +486,19 @@ class AgentLifecycleManager:
         
         agent = self.agents[agent_id]
         
-        # Zatrzymaj messaging
+        # Zatrzymaj messaging najpierw
         if agent.communicator:
-            agent.stop_listening()
-            agent.communicator.disconnect()
+            try:
+                agent.stop_listening()
+                agent.communicator.disconnect()
+            except Exception as e:
+                logger.warning(f"Agent {agent_id}: błąd podczas zamykania communicatora: {e}")
         
+        # FIX: Przejdź przez IDLE jeśli nie jesteś już w IDLE/PAUSED/ERROR
+        if agent.state not in [AgentState.IDLE, AgentState.PAUSED, AgentState.ERROR]:
+            self.transition_state(agent_id, AgentState.IDLE)
+        
+        # Teraz możemy terminować
         self.transition_state(agent_id, AgentState.TERMINATED)
         logger.info(f"Agent {agent_id} został zakończony")
     
@@ -513,3 +521,4 @@ class AgentLifecycleManager:
         if agent.state == AgentState.PAUSED:
             self.transition_state(agent_id, AgentState.READY)
             logger.info(f"Agent {agent_id} został wznowiony")
+
