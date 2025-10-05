@@ -1,13 +1,13 @@
 version: "3.8"
 services:
   # Existing services (agent-orchestrator, ai-router)
-  agent-orchestrator:
-    build: ./services/agent-orchestrator
-    ports: ["8001:8001"]
-    depends_on: [postgres, rabbitmq]
-    environment:
-      - DATABASE_URL=postgresql://postgres:agent-pass@postgres:5432/agent_zero
-      - RABBITMQ_URL=amqp://agent:agent-pass@rabbitmq:5672/
+#  agent-orchestrator:
+#   build: ./services/agent-orchestrator
+#    ports: ["8001:8001"]
+#    depends_on: [postgres, rabbitmq]
+#    environment:
+#      - DATABASE_URL=postgresql://postgres:agent-pass@postgres:5432/agent_zero
+#      - RABBITMQ_URL=amqp://agent:agent-pass@rabbitmq:5672/
 
   ai-router:
     build: ./services/ai-router  

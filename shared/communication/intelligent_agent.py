@@ -7,6 +7,7 @@ Agent który:
 - Ma handlers dla różnych typów wiadomości
 - Może delegować taski do innych agentów
 - Może broadcast'ować wiadomości
+- Używa AI Brain do generowania kodu
 """
 import asyncio
 import logging
@@ -14,6 +15,7 @@ from typing import Dict, Any, Optional, Callable
 from datetime import datetime
 from messagebus import message_bus
 from agent_registry import agent_registry, AgentInfo
+from ai_agent_brain import ai_agent_brain
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +49,15 @@ class IntelligentAgent:
             agent_id: Unikalny ID agenta (np. "backend_001")
             agent_type: Typ agenta (np. "backend", "frontend")
             capabilities: Lista umiejętności (np. ["python", "fastapi"])
-            ai_brain: Opcjonalny AI Brain do generowania odpowiedzi
+            ai_brain: Opcjonalny AI Brain (domyślnie ai_agent_brain)
         """
         self.agent_id = agent_id
         self.agent_type = agent_type
         self.capabilities = capabilities
-        self.ai_brain = ai_brain
+        
+        # Użyj przekazanego ai_brain LUB domyślnego
+        self.ai_brain = ai_brain if ai_brain else ai_agent_brain
+        
         self.status = "offline"
         
         # Handlers dla różnych typów wiadomości
@@ -89,7 +94,6 @@ class IntelligentAgent:
         logger.info(f"   ✅ Registered in Agent Registry")
         
         # 3. Subscribe do własnej kolejki
-        # Słucha na: agent.backend.backend_001.#
         routing_key = f"agent.{self.agent_type}.{self.agent_id}.#"
         await message_bus.subscribe(
             routing_key=routing_key,
@@ -225,7 +229,7 @@ class IntelligentAgent:
             "timestamp": datetime.now().isoformat()
         }
         
-        await message_bus.publish (routing_key, message)
+        await message_bus.publish(routing_key, message)
         logger.info(f"📢 {self.agent_id} broadcast: {message_type}")
         
     async def delegate_task(
