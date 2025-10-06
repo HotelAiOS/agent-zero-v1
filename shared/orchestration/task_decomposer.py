@@ -1,31 +1,23 @@
 """
-Task Decomposer
-Dekompozycja wymagań biznesowych na zadania techniczne
+Task Decomposer - Rozbija wymagania biznesowe na wykonalne zadania
+Integracja z LLM dla inteligentnej analizy wymagań
 """
 
 from enum import Enum
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Set, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-import uuid
+from datetime import datetime
 import logging
+import json
+import sys
+from pathlib import Path
+
+# Import LLM dla analizy wymagań
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from llm import LLMFactory, BaseLLMClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-class TaskType(Enum):
-    """Typy zadań technicznych"""
-    ARCHITECTURE = "architecture"
-    BACKEND = "backend"
-    FRONTEND = "frontend"
-    DATABASE = "database"
-    TESTING = "testing"
-    DEVOPS = "devops"
-    SECURITY = "security"
-    PERFORMANCE = "performance"
-    DOCUMENTATION = "documentation"
-    INTEGRATION = "integration"
 
 
 class TaskPriority(Enum):
@@ -43,644 +35,408 @@ class TaskStatus(Enum):
     READY = "ready"
     IN_PROGRESS = "in_progress"
     BLOCKED = "blocked"
-    REVIEW = "review"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
 @dataclass
 class Task:
-    """Reprezentacja zadania technicznego"""
+    """Pojedyncze zadanie do wykonania"""
     task_id: str
     title: str
     description: str
-    task_type: TaskType
+    agent_type: str
     priority: TaskPriority
-    estimated_hours: float
-    required_agent_type: str
     status: TaskStatus = TaskStatus.PENDING
     
-    # Dependencies
     depends_on: List[str] = field(default_factory=list)
     blocks: List[str] = field(default_factory=list)
     
-    # Assignment
-    assigned_agent: Optional[str] = None
+    estimated_duration_hours: float = 1.0
+    complexity: int = 1
+    required_capabilities: List[str] = field(default_factory=list)
+    tech_stack: List[str] = field(default_factory=list)
+    
+    assigned_agent_id: Optional[str] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
-    
-    # Metadata
-    tags: List[str] = field(default_factory=list)
-    acceptance_criteria: List[str] = field(default_factory=list)
-    deliverables: List[str] = field(default_factory=list)
-    
-    # Results
     result: Optional[Dict[str, Any]] = None
-    error_message: Optional[str] = None
+    error: Optional[str] = None
     
-    def __post_init__(self):
-        if not self.task_id:
-            self.task_id = f"task_{uuid.uuid4().hex[:8]}"
+    context: Dict[str, Any] = field(default_factory=dict)
     
-    def is_ready(self, completed_tasks: List[str]) -> bool:
-        """Sprawdź czy zadanie jest gotowe do wykonania"""
-        if self.status != TaskStatus.PENDING:
-            return False
-        
-        # Sprawdź czy wszystkie zależności są ukończone
-        for dep in self.depends_on:
-            if dep not in completed_tasks:
-                return False
-        
-        return True
+    def can_start(self, completed_tasks: Set[str]) -> bool:
+        """Sprawdź czy zadanie może być rozpoczęte"""
+        return all(dep_id in completed_tasks for dep_id in self.depends_on)
     
-    def can_run_parallel_with(self, other: 'Task') -> bool:
-        """Sprawdź czy zadanie może być wykonane równolegle z innym"""
-        # Nie może jeśli jedno zależy od drugiego
-        if self.task_id in other.depends_on or other.task_id in self.depends_on:
-            return False
+    def to_dict(self) -> Dict[str, Any]:
+        """Konwersja do dict dla serializacji"""
+        return {
+            'task_id': self.task_id,
+            'title': self.title,
+            'description': self.description,
+            'agent_type': self.agent_type,
+            'priority': self.priority.name,
+            'status': self.status.value,
+            'depends_on': self.depends_on,
+            'blocks': self.blocks,
+            'estimated_duration_hours': self.estimated_duration_hours,
+            'complexity': self.complexity,
+            'required_capabilities': self.required_capabilities,
+            'tech_stack': self.tech_stack,
+            'assigned_agent_id': self.assigned_agent_id,
+            'context': self.context
+        }
+
+
+@dataclass
+class TaskDependency:
+    """Graf zależności między zadaniami"""
+    tasks: List[Task]
+    adjacency_list: Dict[str, List[str]] = field(default_factory=dict)
+    
+    def build_graph(self):
+        """Zbuduj graf zależności"""
+        self.adjacency_list = {}
+        for task in self.tasks:
+            self.adjacency_list[task.task_id] = task.depends_on.copy()
+    
+    def get_execution_order(self) -> List[List[str]]:
+        """Zwróć zadania w kolejności wykonania (topological sort)"""
+        in_degree = {}
+        for task in self.tasks:
+            in_degree[task.task_id] = len(task.depends_on)
         
-        # Nie może jeśli blokują się nawzajem
-        if self.task_id in other.blocks or other.task_id in self.blocks:
-            return False
+        levels = []
+        remaining = set(t.task_id for t in self.tasks)
         
-        return True
+        while remaining:
+            current_level = [tid for tid in remaining if in_degree[tid] == 0]
+            
+            if not current_level:
+                logger.error(f"Cycle detected in task dependencies! Remaining: {remaining}")
+                break
+            
+            levels.append(current_level)
+            
+            for tid in current_level:
+                remaining.remove(tid)
+                for task in self.tasks:
+                    if tid in task.depends_on:
+                        in_degree[task.task_id] -= 1
+        
+        return levels
+    
+    def identify_parallel_tasks(self) -> List[List[str]]:
+        """Zwróć grupy zadań które mogą być wykonane równolegle"""
+        return self.get_execution_order()
 
 
 class TaskDecomposer:
-    """
-    Dekompozycja wymagań biznesowych na zadania techniczne
-    """
+    """Dekompozycja wymagań biznesowych na wykonalne zadania"""
     
-    def __init__(self):
-        self.task_templates: Dict[str, List[Dict]] = self._load_task_templates()
-        logger.info("TaskDecomposer zainicjalizowany")
-    
-    def _load_task_templates(self) -> Dict[str, List[Dict]]:
-        """Załaduj szablony zadań dla różnych typów projektów"""
-        return {
-            'fullstack_web_app': self._get_fullstack_template(),
-            'api_backend': self._get_api_backend_template(),
-            'microservices': self._get_microservices_template(),
-            'mobile_backend': self._get_mobile_backend_template()
+    def __init__(self, llm_client: Optional[BaseLLMClient] = None):
+        if llm_client is None:
+            config_path = Path(__file__).parent.parent / "llm" / "config.yaml"
+            LLMFactory.load_config(str(config_path))
+            self.llm_client = LLMFactory.create()
+        else:
+            self.llm_client = llm_client
+        
+        self.task_counter = 0
+        
+        self.phase_agent_mapping = {
+            'discovery': ['architect', 'database'],
+            'design': ['architect', 'database', 'security'],
+            'implementation': ['backend', 'frontend', 'database'],
+            'testing': ['tester', 'security'],
+            'deployment': ['devops'],
+            'optimization': ['performance', 'database']
         }
     
-    def _get_fullstack_template(self) -> List[Dict]:
-        """Szablon Full Stack Web App"""
-        return [
-            {
-                'title': 'Projekt architektury systemu',
-                'type': TaskType.ARCHITECTURE,
-                'agent': 'architect',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 8,
-                'description': 'Zaprojektuj architekturę systemu, diagramy C4, ADR',
-                'deliverables': ['Diagram C4', 'ADR documents', 'Tech stack decision'],
-                'depends_on': []
-            },
-            {
-                'title': 'Projekt schematu bazy danych',
-                'type': TaskType.DATABASE,
-                'agent': 'database',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 6,
-                'description': 'Zaprojektuj schemat bazy danych, ERD, migracje',
-                'deliverables': ['ERD diagram', 'Initial migrations'],
-                'depends_on': ['Projekt architektury systemu']
-            },
-            {
-                'title': 'Setup projektu backend',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.HIGH,
-                'hours': 4,
-                'description': 'Inicjalizacja projektu FastAPI, struktura folderów',
-                'deliverables': ['Project structure', 'requirements.txt'],
-                'depends_on': ['Projekt architektury systemu']
-            },
-            {
-                'title': 'Implementacja modeli danych',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.HIGH,
-                'hours': 6,
-                'description': 'SQLAlchemy models, Pydantic schemas',
-                'deliverables': ['Models code', 'Schemas code'],
-                'depends_on': ['Projekt schematu bazy danych', 'Setup projektu backend']
-            },
-            {
-                'title': 'Implementacja API endpoints',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.HIGH,
-                'hours': 12,
-                'description': 'REST API endpoints, routing, business logic',
-                'deliverables': ['API routes', 'OpenAPI spec'],
-                'depends_on': ['Implementacja modeli danych']
-            },
-            {
-                'title': 'Implementacja autoryzacji',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 8,
-                'description': 'JWT authentication, OAuth2, permissions',
-                'deliverables': ['Auth middleware', 'JWT implementation'],
-                'depends_on': ['Implementacja API endpoints']
-            },
-            {
-                'title': 'Setup projektu frontend',
-                'type': TaskType.FRONTEND,
-                'agent': 'frontend',
-                'priority': TaskPriority.HIGH,
-                'hours': 4,
-                'description': 'React + TypeScript setup, routing, struktura',
-                'deliverables': ['React project', 'package.json', 'Routing setup'],
-                'depends_on': ['Projekt architektury systemu']
-            },
-            {
-                'title': 'Implementacja UI komponentów',
-                'type': TaskType.FRONTEND,
-                'agent': 'frontend',
-                'priority': TaskPriority.MEDIUM,
-                'hours': 16,
-                'description': 'React components, forms, layouts',
-                'deliverables': ['React components', 'Storybook stories'],
-                'depends_on': ['Setup projektu frontend']
-            },
-            {
-                'title': 'Integracja frontend-backend',
-                'type': TaskType.INTEGRATION,
-                'agent': 'frontend',
-                'priority': TaskPriority.HIGH,
-                'hours': 8,
-                'description': 'API calls, state management, error handling',
-                'deliverables': ['API integration', 'State management'],
-                'depends_on': ['Implementacja UI komponentów', 'Implementacja API endpoints']
-            },
-            {
-                'title': 'Testy jednostkowe backend',
-                'type': TaskType.TESTING,
-                'agent': 'tester',
-                'priority': TaskPriority.HIGH,
-                'hours': 8,
-                'description': 'Pytest tests dla API, models, business logic',
-                'deliverables': ['Pytest tests', 'Coverage report'],
-                'depends_on': ['Implementacja API endpoints']
-            },
-            {
-                'title': 'Testy jednostkowe frontend',
-                'type': TaskType.TESTING,
-                'agent': 'tester',
-                'priority': TaskPriority.MEDIUM,
-                'hours': 6,
-                'description': 'Jest/React Testing Library tests',
-                'deliverables': ['Jest tests', 'Coverage report'],
-                'depends_on': ['Implementacja UI komponentów']
-            },
-            {
-                'title': 'Testy E2E',
-                'type': TaskType.TESTING,
-                'agent': 'tester',
-                'priority': TaskPriority.MEDIUM,
-                'hours': 8,
-                'description': 'Playwright E2E tests dla critical paths',
-                'deliverables': ['E2E tests', 'Test report'],
-                'depends_on': ['Integracja frontend-backend']
-            },
-            {
-                'title': 'Audyt bezpieczeństwa',
-                'type': TaskType.SECURITY,
-                'agent': 'security',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 6,
-                'description': 'Security audit, OWASP Top 10, vulnerability scanning',
-                'deliverables': ['Security report', 'Remediation plan'],
-                'depends_on': ['Implementacja autoryzacji']
-            },
-            {
-                'title': 'Setup CI/CD',
-                'type': TaskType.DEVOPS,
-                'agent': 'devops',
-                'priority': TaskPriority.HIGH,
-                'hours': 6,
-                'description': 'GitHub Actions, automated testing, deployment',
-                'deliverables': ['CI/CD pipeline', 'Deployment scripts'],
-                'depends_on': ['Testy jednostkowe backend', 'Testy jednostkowe frontend']
-            },
-            {
-                'title': 'Dockerization',
-                'type': TaskType.DEVOPS,
-                'agent': 'devops',
-                'priority': TaskPriority.HIGH,
-                'hours': 4,
-                'description': 'Dockerfile, docker-compose, multi-stage builds',
-                'deliverables': ['Dockerfile', 'docker-compose.yml'],
-                'depends_on': ['Setup projektu backend', 'Setup projektu frontend']
-            },
-            {
-                'title': 'Dokumentacja użytkownika',
-                'type': TaskType.DOCUMENTATION,
-                'agent': 'backend',
-                'priority': TaskPriority.LOW,
-                'hours': 4,
-                'description': 'README, installation guide, API docs',
-                'deliverables': ['README.md', 'API documentation'],
-                'depends_on': ['Integracja frontend-backend']
-            }
-        ]
-    
-    def _get_api_backend_template(self) -> List[Dict]:
-        """Szablon API Backend Only"""
-        return [
-            {
-                'title': 'Projekt architektury API',
-                'type': TaskType.ARCHITECTURE,
-                'agent': 'architect',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 6,
-                'description': 'API architecture, OpenAPI design, data flow',
-                'deliverables': ['Architecture diagram', 'OpenAPI spec'],
-                'depends_on': []
-            },
-            {
-                'title': 'Projekt bazy danych',
-                'type': TaskType.DATABASE,
-                'agent': 'database',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 6,
-                'description': 'Database schema, indexes, migrations',
-                'deliverables': ['ERD', 'Migrations'],
-                'depends_on': ['Projekt architektury API']
-            },
-            {
-                'title': 'FastAPI setup',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.HIGH,
-                'hours': 3,
-                'description': 'FastAPI project initialization',
-                'deliverables': ['Project structure', 'Dependencies'],
-                'depends_on': ['Projekt architektury API']
-            },
-            {
-                'title': 'Models i schemas',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.HIGH,
-                'hours': 6,
-                'description': 'SQLAlchemy models, Pydantic schemas',
-                'deliverables': ['Models', 'Schemas'],
-                'depends_on': ['Projekt bazy danych', 'FastAPI setup']
-            },
-            {
-                'title': 'CRUD operations',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.HIGH,
-                'hours': 8,
-                'description': 'Create, Read, Update, Delete endpoints',
-                'deliverables': ['CRUD API', 'Tests'],
-                'depends_on': ['Models i schemas']
-            },
-            {
-                'title': 'Authentication',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 6,
-                'description': 'JWT, OAuth2, permissions',
-                'deliverables': ['Auth system', 'Middleware'],
-                'depends_on': ['CRUD operations']
-            },
-            {
-                'title': 'Rate limiting i throttling',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.MEDIUM,
-                'hours': 3,
-                'description': 'API rate limiting, request throttling',
-                'deliverables': ['Rate limiter', 'Config'],
-                'depends_on': ['Authentication']
-            },
-            {
-                'title': 'API testing',
-                'type': TaskType.TESTING,
-                'agent': 'tester',
-                'priority': TaskPriority.HIGH,
-                'hours': 8,
-                'description': 'Integration tests, API tests',
-                'deliverables': ['Test suite', 'Coverage report'],
-                'depends_on': ['Authentication']
-            },
-            {
-                'title': 'Security audit',
-                'type': TaskType.SECURITY,
-                'agent': 'security',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 4,
-                'description': 'OWASP checks, vulnerability scan',
-                'deliverables': ['Security report'],
-                'depends_on': ['Authentication']
-            },
-            {
-                'title': 'API documentation',
-                'type': TaskType.DOCUMENTATION,
-                'agent': 'backend',
-                'priority': TaskPriority.MEDIUM,
-                'hours': 3,
-                'description': 'OpenAPI docs, examples, guides',
-                'deliverables': ['API docs', 'README'],
-                'depends_on': ['CRUD operations']
-            },
-            {
-                'title': 'Docker setup',
-                'type': TaskType.DEVOPS,
-                'agent': 'devops',
-                'priority': TaskPriority.HIGH,
-                'hours': 3,
-                'description': 'Dockerfile, docker-compose',
-                'deliverables': ['Docker files'],
-                'depends_on': ['FastAPI setup']
-            },
-            {
-                'title': 'CI/CD pipeline',
-                'type': TaskType.DEVOPS,
-                'agent': 'devops',
-                'priority': TaskPriority.HIGH,
-                'hours': 4,
-                'description': 'GitHub Actions, auto-deploy',
-                'deliverables': ['CI/CD config'],
-                'depends_on': ['API testing', 'Docker setup']
-            }
-        ]
-    
-    def _get_microservices_template(self) -> List[Dict]:
-        """Szablon Microservices Architecture"""
-        return [
-            {
-                'title': 'Microservices architecture design',
-                'type': TaskType.ARCHITECTURE,
-                'agent': 'architect',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 12,
-                'description': 'Service boundaries, communication patterns, data consistency',
-                'deliverables': ['Architecture diagram', 'Service contracts', 'ADRs'],
-                'depends_on': []
-            },
-            {
-                'title': 'API Gateway setup',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 8,
-                'description': 'Kong/NGINX gateway, routing, auth',
-                'deliverables': ['Gateway config', 'Routing rules'],
-                'depends_on': ['Microservices architecture design']
-            },
-            {
-                'title': 'Service mesh setup',
-                'type': TaskType.DEVOPS,
-                'agent': 'devops',
-                'priority': TaskPriority.HIGH,
-                'hours': 8,
-                'description': 'Istio/Linkerd service mesh',
-                'deliverables': ['Service mesh config'],
-                'depends_on': ['Microservices architecture design']
-            },
-            {
-                'title': 'Message broker setup',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 6,
-                'description': 'RabbitMQ/Kafka for async communication',
-                'deliverables': ['Message broker setup', 'Topics/queues'],
-                'depends_on': ['Microservices architecture design']
-            },
-            {
-                'title': 'Service discovery',
-                'type': TaskType.DEVOPS,
-                'agent': 'devops',
-                'priority': TaskPriority.HIGH,
-                'hours': 4,
-                'description': 'Consul/Eureka service registry',
-                'deliverables': ['Service registry'],
-                'depends_on': ['Service mesh setup']
-            },
-            {
-                'title': 'Distributed tracing',
-                'type': TaskType.DEVOPS,
-                'agent': 'devops',
-                'priority': TaskPriority.MEDIUM,
-                'hours': 6,
-                'description': 'Jaeger/Zipkin tracing',
-                'deliverables': ['Tracing setup', 'Dashboards'],
-                'depends_on': ['Service mesh setup']
-            },
-            {
-                'title': 'Kubernetes deployment',
-                'type': TaskType.DEVOPS,
-                'agent': 'devops',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 12,
-                'description': 'K8s manifests, Helm charts',
-                'deliverables': ['K8s configs', 'Helm charts'],
-                'depends_on': ['Service discovery']
-            }
-        ]
-    
-    def _get_mobile_backend_template(self) -> List[Dict]:
-        """Szablon Mobile Backend"""
-        return [
-            {
-                'title': 'Mobile backend architecture',
-                'type': TaskType.ARCHITECTURE,
-                'agent': 'architect',
-                'priority': TaskPriority.CRITICAL,
-                'hours': 8,
-                'description': 'REST/GraphQL API, push notifications, file storage',
-                'deliverables': ['Architecture', 'API design'],
-                'depends_on': []
-            },
-            {
-                'title': 'API endpoints',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.HIGH,
-                'hours': 12,
-                'description': 'REST API for mobile clients',
-                'deliverables': ['API code', 'OpenAPI spec'],
-                'depends_on': ['Mobile backend architecture']
-            },
-            {
-                'title': 'Push notifications',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.HIGH,
-                'hours': 6,
-                'description': 'FCM/APNS integration',
-                'deliverables': ['Push notification service'],
-                'depends_on': ['API endpoints']
-            },
-            {
-                'title': 'File upload service',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.MEDIUM,
-                'hours': 6,
-                'description': 'S3/Cloud Storage for images/files',
-                'deliverables': ['Upload service', 'CDN config'],
-                'depends_on': ['API endpoints']
-            },
-            {
-                'title': 'Real-time features',
-                'type': TaskType.BACKEND,
-                'agent': 'backend',
-                'priority': TaskPriority.MEDIUM,
-                'hours': 8,
-                'description': 'WebSocket for real-time updates',
-                'deliverables': ['WebSocket server'],
-                'depends_on': ['API endpoints']
-            }
-        ]
-    
-    def decompose_project(
-        self,
-        project_type: str,
-        business_requirements: List[str],
-        additional_features: Optional[List[str]] = None
-    ) -> List[Task]:
-        """
-        Dekompozycja projektu na zadania techniczne
+    async def decompose_project(self, requirements: str, project_type: str = "web_application") -> List[Task]:
+        """Rozbij wymagania biznesowe na zadania"""
+        logger.info(f"🔍 Decomposing project requirements (type: {project_type})...")
         
-        Args:
-            project_type: Typ projektu ('fullstack_web_app', 'api_backend', etc.)
-            business_requirements: Lista wymagań biznesowych
-            additional_features: Dodatkowe feature do implementacji
+        analysis = await self._analyze_requirements_with_llm(requirements, project_type)
+        tasks = self._create_tasks_from_analysis(analysis, requirements)
+        self._add_dependencies(tasks)
         
-        Returns:
-            Lista zadań technicznych (Task objects)
-        """
-        if project_type not in self.task_templates:
-            logger.error(f"Nieznany typ projektu: {project_type}")
-            logger.info(f"Dostępne typy: {list(self.task_templates.keys())}")
-            return []
+        logger.info(f"✅ Created {len(tasks)} tasks with dependencies")
+        return tasks
+    
+    async def _analyze_requirements_with_llm(self, requirements: str, project_type: str) -> Dict[str, Any]:
+        """Użyj LLM do analizy wymagań"""
         
-        template = self.task_templates[project_type]
-        tasks = []
-        task_title_to_id = {}
-        
-        # Utwórz zadania z template
-        for task_data in template:
-            task = Task(
-                task_id=f"task_{uuid.uuid4().hex[:8]}",
-                title=task_data['title'],
-                description=task_data['description'],
-                task_type=task_data['type'],
-                priority=task_data['priority'],
-                estimated_hours=task_data['hours'],
-                required_agent_type=task_data['agent'],
-                deliverables=task_data['deliverables'],
-                depends_on=[]  # Wypełnimy później
+        prompt = f"""Analyze the following project requirements and extract structured information.
+
+Project Type: {project_type}
+
+Requirements:
+{requirements}
+
+Provide a JSON response with the following structure:
+{{
+    "features": [
+        {{
+            "name": "feature name",
+            "description": "detailed description",
+            "complexity": 1-5,
+            "priority": "critical|high|medium|low",
+            "components": ["backend", "frontend", "database"]
+        }}
+    ],
+    "tech_requirements": ["list of required technologies"],
+    "security_requirements": ["list of security features needed"],
+    "performance_requirements": ["list of performance constraints"],
+    "database_needs": {{
+        "type": "relational|nosql|graph",
+        "estimated_tables": 5,
+        "requires_auth": true
+    }}
+}}
+
+Focus on actionable, technical breakdown. Be specific."""
+
+        try:
+            response = await self.llm_client.complete(
+                prompt=prompt,
+                max_tokens=2000,
+                temperature=0.3
             )
-            tasks.append(task)
-            task_title_to_id[task_data['title']] = task.task_id
+            
+            content = response.strip()
+            if content.startswith('```'):
+                content = content.split('```')[1]
+                if content.startswith('json'):
+                    content = content[4:]
+            
+            analysis = json.loads(content)
+            logger.info(f"✅ LLM analysis complete: {len(analysis.get('features', []))} features identified")
+            return analysis
+            
+        except Exception as e:
+            logger.error(f"LLM analysis failed: {e}")
+            return self._fallback_analysis(requirements, project_type)
+    
+    def _fallback_analysis(self, requirements: str, project_type: str) -> Dict[str, Any]:
+        """Prosta analiza bez LLM (fallback)"""
+        logger.warning("Using fallback analysis (no LLM)")
         
-        # Utwórz dependencies (title → task_id)
-        for i, task_data in enumerate(template):
-            for dep_title in task_data.get('depends_on', []):
-                if dep_title in task_title_to_id:
-                    tasks[i].depends_on.append(task_title_to_id[dep_title])
+        return {
+            "features": [
+                {
+                    "name": "Core Application",
+                    "description": requirements[:200],
+                    "complexity": 3,
+                    "priority": "high",
+                    "components": ["backend", "frontend", "database"]
+                }
+            ],
+            "tech_requirements": ["python", "fastapi", "react", "postgresql"],
+            "security_requirements": ["authentication", "authorization"],
+            "performance_requirements": ["caching", "database_optimization"],
+            "database_needs": {
+                "type": "relational",
+                "estimated_tables": 5,
+                "requires_auth": True
+            }
+        }
+    
+    def _create_tasks_from_analysis(self, analysis: Dict[str, Any], requirements: str) -> List[Task]:
+        """Utwórz zadania na podstawie analizy"""
+        tasks = []
         
-        logger.info(
-            f"Dekompozycja projektu {project_type}: "
-            f"{len(tasks)} zadań, "
-            f"~{sum(t.estimated_hours for t in tasks):.1f}h całkowity czas"
-        )
+        tasks.append(self._create_task(
+            title="System Architecture Design",
+            description=f"Design overall system architecture based on requirements: {requirements[:200]}",
+            agent_type="architect",
+            priority=TaskPriority.CRITICAL,
+            complexity=4,
+            context={"requirements": requirements, "analysis": analysis, "phase": "discovery"}
+        ))
+        
+        if analysis.get('database_needs'):
+            tasks.append(self._create_task(
+                title="Database Schema Design",
+                description=f"Design database schema for {analysis['database_needs'].get('estimated_tables', 5)} tables",
+                agent_type="database",
+                priority=TaskPriority.CRITICAL,
+                complexity=3,
+                tech_stack=[analysis['database_needs'].get('type', 'relational')],
+                context={"database_needs": analysis['database_needs'], "phase": "design"}
+            ))
+        
+        if analysis.get('security_requirements'):
+            tasks.append(self._create_task(
+                title="Security Architecture",
+                description=f"Design security: {', '.join(analysis['security_requirements'])}",
+                agent_type="security",
+                priority=TaskPriority.HIGH,
+                complexity=3,
+                required_capabilities=['authentication', 'authorization'],
+                context={"security_requirements": analysis['security_requirements'], "phase": "design"}
+            ))
+        
+        for feature in analysis.get('features', []):
+            if 'backend' in feature.get('components', []):
+                tasks.append(self._create_task(
+                    title=f"Backend: {feature['name']}",
+                    description=feature['description'],
+                    agent_type="backend",
+                    priority=self._parse_priority(feature.get('priority', 'medium')),
+                    complexity=feature.get('complexity', 3),
+                    tech_stack=analysis.get('tech_requirements', []),
+                    context={"feature": feature, "phase": "implementation"}
+                ))
+            
+            if 'frontend' in feature.get('components', []):
+                tasks.append(self._create_task(
+                    title=f"Frontend: {feature['name']}",
+                    description=f"Implement UI for {feature['name']}",
+                    agent_type="frontend",
+                    priority=self._parse_priority(feature.get('priority', 'medium')),
+                    complexity=feature.get('complexity', 3),
+                    context={"feature": feature, "phase": "implementation"}
+                ))
+        
+        tasks.append(self._create_task(
+            title="Integration Testing",
+            description="Test all integrated components",
+            agent_type="tester",
+            priority=TaskPriority.HIGH,
+            complexity=3,
+            context={"phase": "testing"}
+        ))
+        
+        tasks.append(self._create_task(
+            title="Security Testing",
+            description="Security audit and penetration testing",
+            agent_type="security",
+            priority=TaskPriority.HIGH,
+            complexity=4,
+            context={"phase": "testing"}
+        ))
+        
+        if analysis.get('performance_requirements'):
+            tasks.append(self._create_task(
+                title="Performance Optimization",
+                description=f"Optimize: {', '.join(analysis['performance_requirements'])}",
+                agent_type="performance",
+                priority=TaskPriority.MEDIUM,
+                complexity=3,
+                context={"performance_requirements": analysis['performance_requirements'], "phase": "optimization"}
+            ))
+        
+        tasks.append(self._create_task(
+            title="Deployment Setup",
+            description="Configure CI/CD and deployment infrastructure",
+            agent_type="devops",
+            priority=TaskPriority.HIGH,
+            complexity=3,
+            tech_stack=['docker', 'kubernetes'],
+            context={"phase": "deployment"}
+        ))
         
         return tasks
     
-    def get_parallel_tasks(self, tasks: List[Task]) -> List[List[Task]]:
-        """
-        Pogrupuj zadania które mogą być wykonywane równolegle
+    def _create_task(self, title: str, description: str, agent_type: str, priority: TaskPriority,
+                     complexity: int = 3, required_capabilities: List[str] = None,
+                     tech_stack: List[str] = None, context: Dict[str, Any] = None) -> Task:
+        """Helper do tworzenia zadania"""
+        self.task_counter += 1
+        task_id = f"task_{self.task_counter:04d}"
         
-        Returns:
-            Lista grup zadań do równoległego wykonania
-        """
-        completed = []
-        parallel_groups = []
-        remaining_tasks = tasks.copy()
-        
-        while remaining_tasks:
-            # Znajdź zadania które są ready (dependencies completed)
-            ready_tasks = [
-                t for t in remaining_tasks 
-                if t.is_ready([task.task_id for task in completed])
-            ]
-            
-            if not ready_tasks:
-                # Dead lock - zadania czekają na siebie nawzajem
-                logger.warning("Wykryto cykl zależności w zadaniach!")
-                break
-            
-            parallel_groups.append(ready_tasks)
-            
-            # Symuluj completion tych zadań
-            for task in ready_tasks:
-                completed.append(task)
-                remaining_tasks.remove(task)
-        
-        logger.info(
-            f"Podzielono na {len(parallel_groups)} grup równoległych zadań"
+        return Task(
+            task_id=task_id,
+            title=title,
+            description=description,
+            agent_type=agent_type,
+            priority=priority,
+            complexity=complexity,
+            required_capabilities=required_capabilities or [],
+            tech_stack=tech_stack or [],
+            estimated_duration_hours=complexity * 0.5,
+            context=context or {}
         )
-        return parallel_groups
     
-    def estimate_project_duration(
-        self,
-        tasks: List[Task],
-        available_agents: Dict[str, int]
-    ) -> float:
-        """
-        Oszacuj czas trwania projektu
+    def _add_dependencies(self, tasks: List[Task]):
+        """Dodaj dependencies między zadaniami"""
+        task_map = {t.task_id: t for t in tasks}
         
-        Args:
-            tasks: Lista zadań
-            available_agents: Dict {agent_type: count}
+        architecture_tasks = [t for t in tasks if t.agent_type == 'architect']
+        database_tasks = [t for t in tasks if t.agent_type == 'database']
+        security_design_tasks = [t for t in tasks if t.agent_type == 'security' and 'design' in t.context.get('phase', '')]
+        backend_tasks = [t for t in tasks if t.agent_type == 'backend']
+        frontend_tasks = [t for t in tasks if t.agent_type == 'frontend']
+        testing_tasks = [t for t in tasks if t.agent_type == 'tester']
+        security_test_tasks = [t for t in tasks if t.agent_type == 'security' and 'testing' in t.context.get('phase', '')]
+        performance_tasks = [t for t in tasks if t.agent_type == 'performance']
+        devops_tasks = [t for t in tasks if t.agent_type == 'devops']
         
-        Returns:
-            Szacowany czas w godzinach
-        """
-        parallel_groups = self.get_parallel_tasks(tasks)
-        total_duration = 0.0
+        for task in database_tasks + security_design_tasks:
+            if architecture_tasks:
+                task.depends_on.append(architecture_tasks.task_id)
         
-        for group in parallel_groups:
-            # Pogrupuj zadania z grupy po typie agenta
-            agent_tasks: Dict[str, List[Task]] = {}
-            for task in group:
-                agent_type = task.required_agent_type
-                if agent_type not in agent_tasks:
-                    agent_tasks[agent_type] = []
-                agent_tasks[agent_type].append(task)
-            
-            # Dla każdego typu agenta oblicz czas
-            group_duration = 0.0
-            for agent_type, agent_task_list in agent_tasks.items():
-                agent_count = available_agents.get(agent_type, 1)
-                total_hours = sum(t.estimated_hours for t in agent_task_list)
-                duration = total_hours / agent_count
-                group_duration = max(group_duration, duration)
-            
-            total_duration += group_duration
+        for task in backend_tasks:
+            for dep_task in database_tasks + security_design_tasks:
+                task.depends_on.append(dep_task.task_id)
         
-        logger.info(
-            f"Szacowany czas projektu: {total_duration:.1f}h "
-            f"({total_duration/8:.1f} dni roboczych)"
-        )
-        return total_duration
-
-
-# Szybka funkcja do tworzenia decomposera
-def create_decomposer() -> TaskDecomposer:
-    """Utwórz TaskDecomposer"""
-    return TaskDecomposer()
+        for task in frontend_tasks:
+            if backend_tasks:
+                matching_backend = None
+                for bt in backend_tasks:
+                    if task.context.get('feature', {}).get('name') == bt.context.get('feature', {}).get('name'):
+                        matching_backend = bt
+                        break
+                
+                if matching_backend:
+                    task.depends_on.append(matching_backend.task_id)
+                elif backend_tasks:
+                    task.depends_on.append(backend_tasks.task_id)
+        
+        for task in testing_tasks:
+            for impl_task in backend_tasks + frontend_tasks:
+                task.depends_on.append(impl_task.task_id)
+        
+        for task in security_test_tasks:
+            if testing_tasks:
+                task.depends_on.append(testing_tasks.task_id)
+        
+        for task in performance_tasks:
+            if testing_tasks:
+                task.depends_on.append(testing_tasks.task_id)
+        
+        for task in devops_tasks:
+            for dep_task in testing_tasks + security_test_tasks + performance_tasks:
+                if dep_task.task_id not in task.depends_on:
+                    task.depends_on.append(dep_task.task_id)
+        
+        for task in tasks:
+            for dep_id in task.depends_on:
+                if dep_id in task_map:
+                    task_map[dep_id].blocks.append(task.task_id)
+        
+        logger.info("✅ Dependencies added to all tasks")
+    
+    def _parse_priority(self, priority_str: str) -> TaskPriority:
+        """Parse priority string do TaskPriority enum"""
+        mapping = {
+            'critical': TaskPriority.CRITICAL,
+            'high': TaskPriority.HIGH,
+            'medium': TaskPriority.MEDIUM,
+            'low': TaskPriority.LOW,
+            'optional': TaskPriority.OPTIONAL
+        }
+        return mapping.get(priority_str.lower(), TaskPriority.MEDIUM)
+    
+    def build_dependency_graph(self, tasks: List[Task]) -> TaskDependency:
+        """Zbuduj graf zależności"""
+        dep_graph = TaskDependency(tasks=tasks)
+        dep_graph.build_graph()
+        return dep_graph
+    
+    def identify_parallel_tasks(self, tasks: List[Task]) -> List[List[str]]:
+        """Zidentyfikuj zadania które mogą być wykonane równolegle"""
+        dep_graph = self.build_dependency_graph(tasks)
+        return dep_graph.identify_parallel_tasks()

@@ -1,30 +1,35 @@
 """
-Orchestration Module
-System orkiestracji projektów, zadań i zespołów agentów
+Orchestration Module - Team coordination and task management
 """
 
-from .planner import IntelligentPlanner, ProjectPlan
-from .team_formation import TeamFormationEngine, Team
-from .task_decomposer import TaskDecomposer, Task, TaskType
-from .dependency_graph import DependencyGraph, DependencyType
-from .quality_gates import QualityGateManager, QualityGate, GateStatus
-from .scheduler import TaskScheduler, ScheduleStrategy
+from .task_decomposer import (
+    Task,
+    TaskPriority,
+    TaskStatus,
+    TaskDependency,
+    TaskDecomposer
+)
+
+from .team_builder import (
+    TeamBuilder,
+    TeamComposition
+)
+
+from .orchestrator import (
+    ProjectOrchestrator,
+    ProjectPhase,
+    Project
+)
 
 __all__ = [
-    'IntelligentPlanner',
-    'ProjectPlan',
-    'TeamFormationEngine',
-    'Team',
-    'TaskDecomposer',
     'Task',
-    'TaskType',
-    'DependencyGraph',
-    'DependencyType',
-    'QualityGateManager',
-    'QualityGate',
-    'GateStatus',
-    'TaskScheduler',
-    'ScheduleStrategy'
+    'TaskPriority',
+    'TaskStatus',
+    'TaskDependency',
+    'TaskDecomposer',
+    'TeamBuilder',
+    'TeamComposition',
+    'ProjectOrchestrator',
+    'ProjectPhase',
+    'Project'
 ]
-
-__version__ = '1.0.0'
