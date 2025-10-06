@@ -163,9 +163,11 @@ class TeamBuilder:
         """Utwórz nowego agenta danego typu lub pobierz istniejącego"""
         
         # Sprawdź czy mamy już agenta tego typu w stanie READY lub IDLE
-        existing_agents = self.lifecycle_manager.get_agents_by_state(AgentState.READY)
-        existing_agents += self.lifecycle_manager.get_agents_by_state(AgentState.IDLE)
-        
+        # Sprawdź czy mamy już agenta tego typu
+        existing_agents = [
+            agent for agent in self.lifecycle_manager.agents.values()
+            if agent.state in [AgentState.READY, AgentState.IDLE]
+        ]
         for agent in existing_agents:
             if agent.agent_type == agent_type:
                 logger.info(f"♻️ Reusing existing {agent_type}: {agent.agent_id}")

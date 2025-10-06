@@ -199,13 +199,13 @@ Provide a JSON response with the following structure:
 Focus on actionable, technical breakdown. Be specific."""
 
         try:
-            response = await self.llm_client.complete(
-                prompt=prompt,
+            response_obj = self.llm_client.chat(
+                messages=[{"role": "user", "content": prompt}],
                 max_tokens=2000,
                 temperature=0.3
             )
             
-            content = response.strip()
+            content = response_obj.content.strip()
             if content.startswith('```'):
                 content = content.split('```')[1]
                 if content.startswith('json'):
@@ -376,7 +376,7 @@ Focus on actionable, technical breakdown. Be specific."""
         
         for task in database_tasks + security_design_tasks:
             if architecture_tasks:
-                task.depends_on.append(architecture_tasks.task_id)
+                task.depends_on.append(architecture_tasks[0].task_id)
         
         for task in backend_tasks:
             for dep_task in database_tasks + security_design_tasks:
@@ -393,7 +393,7 @@ Focus on actionable, technical breakdown. Be specific."""
                 if matching_backend:
                     task.depends_on.append(matching_backend.task_id)
                 elif backend_tasks:
-                    task.depends_on.append(backend_tasks.task_id)
+                    task.depends_on.append(backend_tasks[0].task_id)
         
         for task in testing_tasks:
             for impl_task in backend_tasks + frontend_tasks:
@@ -401,11 +401,11 @@ Focus on actionable, technical breakdown. Be specific."""
         
         for task in security_test_tasks:
             if testing_tasks:
-                task.depends_on.append(testing_tasks.task_id)
+                task.depends_on.append(testing_tasks[0].task_id)
         
         for task in performance_tasks:
             if testing_tasks:
-                task.depends_on.append(testing_tasks.task_id)
+                task.depends_on.append(testing_tasks[0].task_id)
         
         for task in devops_tasks:
             for dep_task in testing_tasks + security_test_tasks + performance_tasks:

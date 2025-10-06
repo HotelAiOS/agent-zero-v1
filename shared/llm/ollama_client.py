@@ -32,7 +32,7 @@ class OllamaClient(BaseLLMClient):
         super().__init__(config)
         
         self.base_url = config.get('base_url', 'http://localhost:11434')
-        self.client = ollama.Client(host=self.base_url)
+        self.client = ollama.Client(host=self.base_url, timeout=600.0)
         
         # Model assignment cache
         self.agent_models: Dict[str, ModelConfig] = {}
