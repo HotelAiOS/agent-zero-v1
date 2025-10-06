@@ -1,6 +1,6 @@
 """
 Live Dashboard - Agent Zero v1
-Real-time monitoring systemu agentów
+Real-time monitoring systemu agentów z Neo4j knowledge stats
 """
 
 import sys
@@ -9,7 +9,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import asyncio
 import logging
 import json
@@ -22,13 +22,20 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from agent_factory.factory import AgentFactory
 from agent_factory.lifecycle import AgentLifecycleManager, AgentState
 
+# Import dla Neo4j (optional)
+try:
+    from knowledge import Neo4jClient
+    NEO4J_AVAILABLE = True
+except ImportError:
+    NEO4J_AVAILABLE = False
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Inicjalizacja FastAPI
 app = FastAPI(
     title="Agent Zero Dashboard",
-    description="Live monitoring systemu agentów AI",
+    description="Live monitoring systemu agentów AI z Neo4j knowledge integration",
     version="1.0.0"
 )
 
@@ -36,9 +43,10 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
-# Globalny lifecycle manager (będzie inicjalizowany w startup)
-lifecycle_manager: AgentLifecycleManager = None
-factory: AgentFactory = None
+# Globalne instancje (inicjalizowane w startup)
+lifecycle_manager: Optional[AgentLifecycleManager] = None
+factory: Optional[AgentFactory] = None
+neo4j_client: Optional['Neo4jClient'] = None
 
 
 class ConnectionManager:
@@ -78,15 +86,29 @@ manager = ConnectionManager()
 @app.on_event("startup")
 async def startup_event():
     """Inicjalizacja przy starcie aplikacji"""
-    global lifecycle_manager, factory
+    global lifecycle_manager, factory, neo4j_client
     
     logger.info("🚀 Uruchamianie Agent Zero Dashboard...")
     
     try:
-        # Najpierw utwórz lifecycle manager z messaging
-        lifecycle_manager = AgentLifecycleManager(enable_messaging=True)
+        # Inicjalizuj Neo4j (optional)
+        if NEO4J_AVAILABLE:
+            try:
+                neo4j_client = Neo4jClient()
+                logger.info("✅ Neo4j client zainicjalizowany")
+            except Exception as e:
+                logger.warning(f"Neo4j connection failed: {e}")
+                neo4j_client = None
+        else:
+            logger.info("ℹ️  Neo4j not available - knowledge stats disabled")
         
-        # Potem utwórz factory z tym lifecycle managerem
+        # Utwórz lifecycle manager z messaging i Neo4j
+        lifecycle_manager = AgentLifecycleManager(
+            enable_messaging=True,
+            neo4j_client=neo4j_client
+        )
+        
+        # Utwórz factory z lifecycle manager
         factory = AgentFactory(lifecycle_manager=lifecycle_manager)
         
         logger.info("✅ Factory i Lifecycle Manager zainicjalizowane")
@@ -104,6 +126,13 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup przy zamykaniu"""
     logger.info("🛑 Zamykanie Agent Zero Dashboard...")
+    
+    if neo4j_client:
+        try:
+            neo4j_client.close()
+            logger.info("✅ Neo4j connection closed")
+        except Exception as e:
+            logger.error(f"Error closing Neo4j: {e}")
 
 
 async def broadcast_metrics():
@@ -195,6 +224,80 @@ async def get_agent_metrics(agent_id: str):
     }
 
 
+@app.get("/api/knowledge/stats")
+async def get_knowledge_stats():
+    """REST endpoint - Neo4j knowledge statistics"""
+    if neo4j_client is None:
+        return {
+            "enabled": False,
+            "error": "Neo4j not available"
+        }
+    
+    try:
+        # Pobierz statystyki dla wszystkich agentów
+        all_stats = []
+        if lifecycle_manager:
+            for agent_id in lifecycle_manager.agents.keys():
+                try:
+                    stats = neo4j_client.get_agent_stats(agent_id)
+                    if stats:
+                        stats['agent_id'] = agent_id
+                        all_stats.append(stats)
+                except Exception as e:
+                    logger.error(f"Error getting stats for {agent_id}: {e}")
+        
+        # Agreguj stats
+        total_tasks = sum(s.get('total_tasks', 0) for s in all_stats)
+        total_experiences = sum(s.get('experiences', 0) for s in all_stats)
+        
+        return {
+            "enabled": True,
+            "agents": all_stats,
+            "summary": {
+                "total_agents": len(all_stats),
+                "total_tasks": total_tasks,
+                "total_experiences": total_experiences
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Error getting knowledge stats: {e}")
+        return {
+            "enabled": True,
+            "error": str(e)
+        }
+
+
+@app.get("/api/agents/{agent_id}/experiences")
+async def get_agent_experiences(agent_id: str, keywords: str = "", limit: int = 10):
+    """REST endpoint - experiences agenta z Neo4j"""
+    if lifecycle_manager is None or neo4j_client is None:
+        return {"error": "System not ready or Neo4j not available"}
+    
+    try:
+        keyword_list = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
+        
+        if not keyword_list:
+            return {"experiences": [], "message": "No keywords provided"}
+        
+        experiences = lifecycle_manager.get_agent_experiences(
+            agent_id=agent_id,
+            keywords=keyword_list,
+            limit=limit
+        )
+        
+        return {
+            "agent_id": agent_id,
+            "keywords": keyword_list,
+            "experiences": experiences,
+            "count": len(experiences)
+        }
+    
+    except Exception as e:
+        logger.error(f"Error getting experiences: {e}")
+        return {"error": str(e)}
+
+
 @app.post("/api/test/create-agents")
 async def create_test_agents():
     """Endpoint testowy - tworzy 3 agentów dla demo"""
@@ -212,17 +315,22 @@ async def create_test_agents():
         backend.metrics.messages_sent = 12
         backend.metrics.messages_received = 8
         backend.metrics.uptime_seconds = 120.5
+        lifecycle_manager.transition_state(backend.agent_id, AgentState.INITIALIZING)
+        lifecycle_manager.transition_state(backend.agent_id, AgentState.READY)
         lifecycle_manager.transition_state(backend.agent_id, AgentState.BUSY)
         
         frontend.metrics.tasks_completed = 3
         frontend.metrics.messages_sent = 7
         frontend.metrics.messages_received = 5
+        lifecycle_manager.transition_state(frontend.agent_id, AgentState.INITIALIZING)
         lifecycle_manager.transition_state(frontend.agent_id, AgentState.READY)
         
         database.metrics.tasks_completed = 8
         database.metrics.messages_sent = 15
         database.metrics.messages_received = 12
         database.metrics.uptime_seconds = 200.0
+        lifecycle_manager.transition_state(database.agent_id, AgentState.INITIALIZING)
+        lifecycle_manager.transition_state(database.agent_id, AgentState.READY)
         lifecycle_manager.transition_state(database.agent_id, AgentState.IDLE)
         
         logger.info(f"✅ Utworzono testowych agentów: {backend.agent_id}, {frontend.agent_id}, {database.agent_id}")
@@ -275,6 +383,7 @@ if __name__ == "__main__":
     print("🚀 Uruchamianie Agent Zero Dashboard na http://localhost:5000")
     print("📊 WebSocket: ws://localhost:5000/ws/metrics")
     print("🔌 REST API: http://localhost:5000/api/health")
+    print("💡 Knowledge: http://localhost:5000/api/knowledge/stats")
     print("🧪 Test API: POST http://localhost:5000/api/test/create-agents")
     
     uvicorn.run(
