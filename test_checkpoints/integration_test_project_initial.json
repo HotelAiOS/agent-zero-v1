@@ -1,0 +1,12 @@
+{
+  "project_name": "integration_test_project",
+  "checkpoint_id": "initial",
+  "timestamp": "2025-10-06 20:22:07.637375",
+  "completed_tasks": [],
+  "current_phase": "initialization",
+  "agent_states": {},
+  "execution_context": {
+    "requirements": "\n        Build a REST API with:\n        - User authentication\n        - CRUD operations for tasks\n        - Database integration\n        - API documentation\n        - Unit tests\n        ",
+    "project_path": "./test_output"
+  }
+}

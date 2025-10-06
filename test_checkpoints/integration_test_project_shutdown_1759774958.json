@@ -1,0 +1,11 @@
+{
+  "project_name": "integration_test_project",
+  "checkpoint_id": "shutdown_1759774958",
+  "timestamp": "2025-10-06 20:22:38.679871",
+  "completed_tasks": [],
+  "current_phase": "shutdown",
+  "agent_states": {},
+  "execution_context": {
+    "shutdown_reason": "system_shutdown"
+  }
+}
