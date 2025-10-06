@@ -1,0 +1,11 @@
+{
+  "project_name": "taskmanager_api",
+  "checkpoint_id": "shutdown_1759776837",
+  "timestamp": "2025-10-06 20:53:57.728927",
+  "completed_tasks": [],
+  "current_phase": "shutdown",
+  "agent_states": {},
+  "execution_context": {
+    "shutdown_reason": "system_shutdown"
+  }
+}
