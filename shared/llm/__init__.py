@@ -1,17 +1,21 @@
 """
-LLM Module
-Ollama integration for Agent Zero
+LLM Module - Multi-provider support
 """
 
-from .ollama_client import OllamaClient, ModelConfig
-from .prompt_builder import PromptBuilder
-from .response_parser import ResponseParser
+from .base_client import BaseLLMClient, LLMResponse, ModelConfig
+from .ollama_client import OllamaClient
+from .openai_client import OpenAIClient
+from .anthropic_client import AnthropicClient
+from .google_client import GoogleClient
+from .llm_factory import LLMFactory
 
 __all__ = [
-    'OllamaClient',
+    'BaseLLMClient',
+    'LLMResponse',
     'ModelConfig',
-    'PromptBuilder',
-    'ResponseParser'
+    'OllamaClient',
+    'OpenAIClient',
+    'AnthropicClient',
+    'GoogleClient',
+    'LLMFactory'
 ]
-
-__version__ = '1.0.0'

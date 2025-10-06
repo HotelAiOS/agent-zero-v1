@@ -1,5 +1,5 @@
 """
-Ollama Client
+Ollama Client - Local LLM provider
 Multi-model orchestration for heterogeneous AI team
 """
 
@@ -7,92 +7,76 @@ import ollama
 import yaml
 import logging
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass
 from pathlib import Path
+
+from .base_client import BaseLLMClient, LLMResponse, ModelConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ModelConfig:
-    """Configuration for a specific model"""
-    model: str
-    temperature: float = 0.7
-    num_ctx: int = 8192
-    num_predict: int = 4096
-
-
-class OllamaClient:
+class OllamaClient(BaseLLMClient):
     """
     Ollama Multi-Model Client
     Heterogeneous model assignment for specialized agents
     """
     
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config: Dict[str, Any], config_path: Optional[str] = None):
         """
-        Initialize Ollama client with multi-model config
+        Initialize Ollama client
         
         Args:
-            config_path: Path to config YAML
+            config: Provider configuration from config.yaml
+            config_path: Optional path to full config.yaml
         """
-        self.config_path = Path(config_path)
-        self.config = self._load_config()
-        self.base_url = self.config['llm']['base_url']
+        super().__init__(config)
+        
+        self.base_url = config.get('base_url', 'http://localhost:11434')
         self.client = ollama.Client(host=self.base_url)
         
         # Model assignment cache
         self.agent_models: Dict[str, ModelConfig] = {}
         self.protocol_models: Dict[str, ModelConfig] = {}
         
-        self._initialize_models()
+        # Load full config if provided
+        if config_path:
+            self._load_full_config(config_path)
+        else:
+            self._initialize_from_config(config)
         
         logger.info(f"OllamaClient initialized with {len(self.agent_models)} agent models")
     
-    def _load_config(self) -> Dict[str, Any]:
-        """Load YAML configuration"""
-        if not self.config_path.exists():
-            logger.warning(f"Config not found: {self.config_path}, using defaults")
-            return self._default_config()
+    def _load_full_config(self, config_path: str):
+        """Load full YAML configuration"""
+        path = Path(config_path)
+        if not path.exists():
+            logger.warning(f"Config not found: {config_path}, using provider config only")
+            return
         
-        with open(self.config_path, 'r') as f:
-            return yaml.safe_load(f)
+        with open(path, 'r') as f:
+            full_config = yaml.safe_load(f)
+        
+        self._initialize_from_config(full_config.get('llm', {}))
     
-    def _default_config(self) -> Dict[str, Any]:
-        """Default configuration if YAML not found"""
-        return {
-            'llm': {
-                'base_url': 'http://localhost:11434',
-                'default': {
-                    'temperature': 0.7,
-                    'num_ctx': 8192,
-                    'num_predict': 4096
-                },
-                'agents': {
-                    'backend': {'model': 'deepseek-coder:33b'}
-                }
-            }
-        }
-    
-    def _initialize_models(self):
+    def _initialize_from_config(self, llm_config: Dict[str, Any]):
         """Initialize model assignments from config"""
-        agents = self.config['llm'].get('agents', {})
-        default = self.config['llm'].get('default', {})
+        agents = llm_config.get('agents', {})
+        default = llm_config.get('default', {})
         
         # Agent models
         for agent_type, cfg in agents.items():
             self.agent_models[agent_type] = ModelConfig(
-                model=cfg.get('model'),
+                model=cfg.get('model', 'deepseek-coder:6.7b'),
                 temperature=cfg.get('temperature', default.get('temperature', 0.7)),
                 num_ctx=cfg.get('num_ctx', default.get('num_ctx', 8192)),
                 num_predict=cfg.get('num_predict', default.get('num_predict', 4096))
             )
         
         # Protocol models
-        protocols = self.config['llm'].get('protocols', {})
+        protocols = llm_config.get('protocols', {})
         for protocol_type, cfg in protocols.items():
             self.protocol_models[protocol_type] = ModelConfig(
-                model=cfg.get('model'),
+                model=cfg.get('model', 'deepseek-coder:6.7b'),
                 temperature=cfg.get('temperature', default.get('temperature', 0.7)),
                 num_ctx=cfg.get('num_ctx', default.get('num_ctx', 8192)),
                 num_predict=cfg.get('num_predict', default.get('num_predict', 4096))
@@ -101,56 +85,61 @@ class OllamaClient:
         logger.info(f"Loaded {len(self.agent_models)} agent models, {len(self.protocol_models)} protocol models")
     
     def get_model_for_agent(self, agent_type: str) -> ModelConfig:
-        """
-        Get optimal model for agent type
+        """Get model config for agent type"""
+        if agent_type in self.agent_models:
+            return self.agent_models[agent_type]
         
-        Args:
-            agent_type: Agent type (architect, backend, etc.)
-        
-        Returns:
-            ModelConfig for this agent
-        """
-        if agent_type not in self.agent_models:
-            logger.warning(f"No model config for {agent_type}, using default")
-            return ModelConfig(model='deepseek-coder:33b')
-        
-        return self.agent_models[agent_type]
+        # Fallback to default
+        return ModelConfig(
+            model=self.model_mapping.get('default', 'deepseek-coder:6.7b'),
+            temperature=0.7
+        )
     
     def get_model_for_protocol(self, protocol_type: str) -> ModelConfig:
-        """Get optimal model for protocol"""
-        if protocol_type not in self.protocol_models:
-            logger.warning(f"No model config for protocol {protocol_type}")
-            return ModelConfig(model='mixtral:8x7b')
+        """Get model config for protocol type"""
+        if protocol_type in self.protocol_models:
+            return self.protocol_models[protocol_type]
         
-        return self.protocol_models[protocol_type]
+        return ModelConfig(model='deepseek-coder:6.7b', temperature=0.7)
     
     def chat(
         self,
         messages: List[Dict[str, str]],
-        model_config: Optional[ModelConfig] = None,
         agent_type: Optional[str] = None,
-        protocol_type: Optional[str] = None
-    ) -> Dict[str, Any]:
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs
+    ) -> LLMResponse:
         """
         Chat with Ollama model
         
         Args:
             messages: Chat messages
-            model_config: Explicit model config
             agent_type: Agent type (auto-select model)
-            protocol_type: Protocol type (auto-select model)
+            model: Explicit model override
+            temperature: Temperature override
+            max_tokens: Max tokens override (num_predict in Ollama)
         
         Returns:
-            Response dict
+            LLMResponse with unified format
         """
         # Determine model config
-        if model_config is None:
-            if agent_type:
-                model_config = self.get_model_for_agent(agent_type)
-            elif protocol_type:
-                model_config = self.get_model_for_protocol(protocol_type)
-            else:
-                model_config = ModelConfig(model='deepseek-coder:33b')
+        if model:
+            model_config = ModelConfig(model=model, temperature=temperature or 0.7)
+        elif agent_type:
+            model_config = self.get_model_for_agent(agent_type)
+            if temperature is not None:
+                model_config.temperature = temperature
+        else:
+            model_config = ModelConfig(
+                model=self.model_mapping.get('default', 'deepseek-coder:6.7b'),
+                temperature=temperature or 0.7
+            )
+        
+        # Override max_tokens if provided
+        if max_tokens:
+            model_config.num_predict = max_tokens
         
         logger.info(f"Ollama call: {model_config.model} (temp={model_config.temperature})")
         
@@ -160,32 +149,49 @@ class OllamaClient:
                 messages=messages,
                 options={
                     'temperature': model_config.temperature,
-                    'num_ctx': model_config.num_ctx,
-                    'num_predict': model_config.num_predict
+                    'num_ctx': model_config.num_ctx or 8192,
+                    'num_predict': model_config.num_predict or 4096
                 }
             )
             
-            # Log token usage
+            # Extract content
+            content = response.get('message', {}).get('content', '')
+            
+            # Extract token counts
             eval_count = response.get('eval_count', 0)
             prompt_eval_count = response.get('prompt_eval_count', 0)
+            
             logger.info(f"✓ {model_config.model}: {eval_count} output tokens, {prompt_eval_count} input tokens")
             
-            return response
+            return LLMResponse(
+                content=content,
+                model=model_config.model,
+                provider="ollama",
+                tokens_used=eval_count + prompt_eval_count,
+                prompt_tokens=prompt_eval_count,
+                completion_tokens=eval_count,
+                raw_response=response
+            )
         
         except Exception as e:
             logger.error(f"Ollama error ({model_config.model}): {e}")
             raise
     
+    async def health_check(self) -> bool:
+        """Check if Ollama is available"""
+        try:
+            models = self.list_available_models()
+            return len(models) > 0
+        except:
+            return False
+    
     def list_available_models(self) -> List[str]:
         """List all available Ollama models"""
         try:
-            # POPRAWKA: response to ListResponse object z atrybutem 'models'
             response = self.client.list()
             
-            # response.models to lista obiektów Model
             if hasattr(response, 'models'):
                 models = response.models
-                # Każdy Model ma atrybut 'model' (nie 'name'!)
                 names = []
                 for m in models:
                     if hasattr(m, 'model'):
