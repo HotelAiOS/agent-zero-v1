@@ -1,6 +1,6 @@
 """
 Agent Lifecycle Manager
-Zarządzanie cyklem życia agentów z integracją messaging
+Zarządzanie cyklem życia agentów z integracją messaging i Neo4j
 """
 
 from enum import Enum
@@ -16,6 +16,15 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 from llm.prompt_builder import PromptBuilder, PromptContext
 from llm.response_parser import ResponseParser
+
+# Import dla Neo4j Knowledge Graph (optional)
+try:
+    from knowledge import Neo4jClient
+    NEO4J_AVAILABLE = True
+except ImportError:
+    NEO4J_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("Neo4j client not available - knowledge persistence disabled")
 
 # Import dla messaging
 from messaging import AgentCommunicator, Message, MessageType
@@ -75,7 +84,7 @@ class AgentInstance:
     llm_client: Any = None
     template: Any = None
     
-    # NOWE: Komunikator dla messaging
+    # Komunikator dla messaging
     communicator: Optional[AgentCommunicator] = None
     
     def mark_active(self):
@@ -170,7 +179,7 @@ class AgentInstance:
                 'tokens_used': 0
             }
     
-    # === NOWE: METODY KOMUNIKACJI ===
+    # === METODY KOMUNIKACJI ===
     
     def send_message(
         self,
@@ -273,17 +282,33 @@ class AgentInstance:
 
 
 class AgentLifecycleManager:
-    """Manager cyklu życia agentów"""
+    """Manager cyklu życia agentów z Neo4j knowledge persistence"""
     
-    def __init__(self, enable_messaging: bool = True):
+    def __init__(
+        self, 
+        enable_messaging: bool = True,
+        neo4j_client: Optional['Neo4jClient'] = None
+    ):
         """
         Initialize lifecycle manager
         
         Args:
             enable_messaging: Czy włączyć komunikację przez RabbitMQ
+            neo4j_client: Opcjonalny Neo4j client dla knowledge persistence
         """
         self.agents: Dict[str, AgentInstance] = {}
         self.enable_messaging = enable_messaging
+        self.neo4j_client = neo4j_client
+        
+        # Jeśli Neo4j dostępny ale nie podano clienta, utwórz nowy
+        if NEO4J_AVAILABLE and neo4j_client is None:
+            try:
+                self.neo4j_client = Neo4jClient()
+                logger.info("✅ Neo4j knowledge persistence enabled")
+            except Exception as e:
+                logger.warning(f"Neo4j connection failed: {e}")
+                self.neo4j_client = None
+        
         self.state_transitions: Dict[AgentState, List[AgentState]] = {
             AgentState.CREATED: [AgentState.INITIALIZING],
             AgentState.INITIALIZING: [AgentState.READY, AgentState.ERROR],
@@ -296,13 +321,15 @@ class AgentLifecycleManager:
         }
         logger.info(
             f"AgentLifecycleManager zainicjalizowany "
-            f"(messaging: {'enabled' if enable_messaging else 'disabled'})"
+            f"(messaging: {'enabled' if enable_messaging else 'disabled'}, "
+            f"neo4j: {'enabled' if self.neo4j_client else 'disabled'})"
         )
     
     def create_agent(
         self, 
         agent_id: str, 
         agent_type: str,
+        capabilities: Optional[List[str]] = None,
         enable_messaging: Optional[bool] = None
     ) -> AgentInstance:
         """
@@ -311,6 +338,7 @@ class AgentLifecycleManager:
         Args:
             agent_id: ID agenta
             agent_type: Typ agenta
+            capabilities: Lista capabilities (dla Neo4j)
             enable_messaging: Czy włączyć messaging (None = użyj domyślnego)
         
         Returns:
@@ -337,6 +365,18 @@ class AgentLifecycleManager:
                 logger.info(f"Agent {agent_id}: communicator zainicjalizowany")
             except Exception as e:
                 logger.warning(f"Agent {agent_id}: nie udało się zainicjalizować communicatora: {e}")
+        
+        # Zapisz agenta do Neo4j Knowledge Graph
+        if self.neo4j_client:
+            try:
+                self.neo4j_client.create_agent_node(
+                    agent_id=agent_id,
+                    agent_type=agent_type,
+                    capabilities=capabilities or []
+                )
+                logger.info(f"Agent {agent_id}: zapisany w Neo4j knowledge graph")
+            except Exception as e:
+                logger.warning(f"Agent {agent_id}: nie udało się zapisać do Neo4j: {e}")
         
         self.agents[agent_id] = agent
         logger.info(f"Utworzono agenta: {agent_id} (typ: {agent_type})")
@@ -374,8 +414,23 @@ class AgentLifecycleManager:
         )
         return True
     
-    def assign_task(self, agent_id: str, task_id: str) -> bool:
-        """Przypisz zadanie agentowi"""
+    def assign_task(
+        self, 
+        agent_id: str, 
+        task_id: str,
+        task_description: Optional[str] = None
+    ) -> bool:
+        """
+        Przypisz zadanie agentowi
+        
+        Args:
+            agent_id: ID agenta
+            task_id: ID zadania
+            task_description: Opis zadania (dla Neo4j)
+        
+        Returns:
+            True jeśli przypisano
+        """
         if agent_id not in self.agents:
             logger.error(f"Agent {agent_id} nie istnieje")
             return False
@@ -392,17 +447,43 @@ class AgentLifecycleManager:
         agent.mark_active()
         self.transition_state(agent_id, AgentState.BUSY)
         
+        # Zapisz task do Neo4j
+        if self.neo4j_client and task_description:
+            try:
+                self.neo4j_client.create_task_node(
+                    task_id=task_id,
+                    description=task_description,
+                    agent_id=agent_id
+                )
+                logger.info(f"Task {task_id}: zapisany w Neo4j")
+            except Exception as e:
+                logger.warning(f"Task {task_id}: nie udało się zapisać do Neo4j: {e}")
+        
         logger.info(f"Przypisano zadanie {task_id} agentowi {agent_id}")
         return True
     
     def complete_task(
         self,
         agent_id: str,
+        task_id: Optional[str] = None,
         success: bool = True,
+        outcome: Optional[str] = None,
         tokens_used: int = 0,
-        response_time: float = 0.0
+        response_time: float = 0.0,
+        store_experience: bool = True
     ):
-        """Oznacz zadanie jako zakończone"""
+        """
+        Oznacz zadanie jako zakończone i zapisz experience do Neo4j
+        
+        Args:
+            agent_id: ID agenta
+            task_id: ID zadania (opcjonalny)
+            success: Czy zadanie było sukcesem
+            outcome: Opis wyniku
+            tokens_used: Ilość użytych tokenów
+            response_time: Czas odpowiedzi
+            store_experience: Czy zapisać experience do Neo4j
+        """
         if agent_id not in self.agents:
             return
         
@@ -415,6 +496,39 @@ class AgentLifecycleManager:
         
         agent.metrics.total_tokens_used += tokens_used
         agent.metrics.update_response_time(response_time)
+        
+        # Zapisz do Neo4j
+        if self.neo4j_client:
+            # Complete task w grafie
+            if task_id:
+                try:
+                    self.neo4j_client.complete_task(
+                        task_id=task_id,
+                        success=success,
+                        outcome=outcome or ("Success" if success else "Failed")
+                    )
+                except Exception as e:
+                    logger.warning(f"Task {task_id}: nie udało się zaktualizować w Neo4j: {e}")
+            
+            # Store experience
+            if store_experience and outcome:
+                try:
+                    context = f"Task: {task_id or agent.current_task}" if task_id or agent.current_task else "Generic task"
+                    self.neo4j_client.store_experience(
+                        agent_id=agent_id,
+                        context=context,
+                        outcome=outcome,
+                        success=success,
+                        metadata={
+                            'tokens_used': tokens_used,
+                            'response_time': response_time,
+                            'agent_type': agent.agent_type
+                        }
+                    )
+                    logger.info(f"Agent {agent_id}: experience zapisane w Neo4j")
+                except Exception as e:
+                    logger.warning(f"Agent {agent_id}: nie udało się zapisać experience: {e}")
+        
         agent.current_task = None
         agent.mark_active()
         
@@ -425,6 +539,36 @@ class AgentLifecycleManager:
             f"Agent {agent_id} zakończył zadanie ({status}, "
             f"tokens: {tokens_used}, czas: {response_time:.2f}s)"
         )
+    
+    def get_agent_experiences(
+        self, 
+        agent_id: str, 
+        keywords: List[str],
+        limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Pobierz podobne experiences agenta z Neo4j
+        
+        Args:
+            agent_id: ID agenta
+            keywords: Słowa kluczowe do wyszukania
+            limit: Max ilość wyników
+        
+        Returns:
+            Lista experiences
+        """
+        if not self.neo4j_client:
+            return []
+        
+        try:
+            return self.neo4j_client.get_similar_experiences(
+                agent_id=agent_id,
+                context_keywords=keywords,
+                limit=limit
+            )
+        except Exception as e:
+            logger.error(f"Błąd pobierania experiences: {e}")
+            return []
     
     def get_available_agents(self, agent_type: Optional[str] = None) -> List[str]:
         """Pobierz listę dostępnych agentów"""
@@ -473,7 +617,8 @@ class AgentLifecycleManager:
             "total_tasks_completed": total_tasks,
             "total_errors": total_errors,
             "total_messages": total_messages,
-            "error_rate": total_errors / max(total_tasks, 1)
+            "error_rate": total_errors / max(total_tasks, 1),
+            "neo4j_enabled": self.neo4j_client is not None
         }
         
         logger.info(f"System health: {health['status']}")
@@ -486,7 +631,7 @@ class AgentLifecycleManager:
         
         agent = self.agents[agent_id]
         
-        # Zatrzymaj messaging najpierw
+        # Zatrzymaj messaging
         if agent.communicator:
             try:
                 agent.stop_listening()
@@ -494,11 +639,11 @@ class AgentLifecycleManager:
             except Exception as e:
                 logger.warning(f"Agent {agent_id}: błąd podczas zamykania communicatora: {e}")
         
-        # FIX: Przejdź przez IDLE jeśli nie jesteś już w IDLE/PAUSED/ERROR
+        # Przejdź przez IDLE jeśli nie jesteś już w IDLE/PAUSED/ERROR
         if agent.state not in [AgentState.IDLE, AgentState.PAUSED, AgentState.ERROR]:
             self.transition_state(agent_id, AgentState.IDLE)
         
-        # Teraz możemy terminować
+        # Terminuj
         self.transition_state(agent_id, AgentState.TERMINATED)
         logger.info(f"Agent {agent_id} został zakończony")
     
@@ -521,4 +666,3 @@ class AgentLifecycleManager:
         if agent.state == AgentState.PAUSED:
             self.transition_state(agent_id, AgentState.READY)
             logger.info(f"Agent {agent_id} został wznowiony")
-
