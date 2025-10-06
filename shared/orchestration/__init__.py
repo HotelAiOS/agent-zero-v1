@@ -12,13 +12,8 @@ from .task_decomposer import (
 
 from .team_builder import (
     TeamBuilder,
-    TeamComposition
-)
-
-from .orchestrator import (
-    ProjectOrchestrator,
-    ProjectPhase,
-    Project
+    TeamComposition,
+    TeamMember
 )
 
 __all__ = [
@@ -29,7 +24,5 @@ __all__ = [
     'TaskDecomposer',
     'TeamBuilder',
     'TeamComposition',
-    'ProjectOrchestrator',
-    'ProjectPhase',
-    'Project'
+    'TeamMember'
 ]
