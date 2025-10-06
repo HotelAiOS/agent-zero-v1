@@ -10,9 +10,10 @@ from dataclasses import dataclass
 import logging
 import sys
 
-# NOWE: Import OllamaClient
+# Multi-LLM Support with automatic fallback
 sys.path.append(str(Path(__file__).parent.parent))
-from llm.ollama_client import OllamaClient
+from llm import LLMFactory, BaseLLMClient
+
 
 from .capabilities import (
     AgentCapability, 
@@ -54,7 +55,8 @@ class AgentFactory:
         templates_dir: Optional[Path] = None,
         capability_matcher: Optional[CapabilityMatcher] = None,
         lifecycle_manager: Optional[AgentLifecycleManager] = None,
-        llm_client: Optional[OllamaClient] = None  # NOWE!
+        llm_client: Optional[BaseLLMClient] = None  # Multi-LLM with fallback
+
     ):
         """
         Args:
@@ -72,10 +74,13 @@ class AgentFactory:
 
         self.lifecycle_manager = lifecycle_manager or AgentLifecycleManager(enable_messaging=True)
         
-        # NOWE: Inicjalizuj LLM client
-        self.llm_client = llm_client or OllamaClient(
-            config_path=str(Path(__file__).parent.parent / "llm" / "config.yaml")
-        )
+        # Multi-LLM client with automatic fallback
+        if llm_client is None:
+            LLMFactory.load_config(str(Path(__file__).parent.parent / "llm" / "config.yaml"))
+            self.llm_client = LLMFactory.create()  # Uses default provider with fallback
+        else:
+            self.llm_client = llm_client
+
         
         # Załaduj templates przy inicjalizacji
         self._load_templates()
