@@ -1,0 +1,603 @@
+INFO:llm.llm_factory:✅ Loaded LLM config from /home/ianua/projects/agent-zero-v1/shared/llm/config.yaml
+INFO:llm.llm_factory:   Default provider: ollama
+INFO:llm.base_client:OllamaClient initializing...
+INFO:llm.ollama_client:Loaded 8 agent models, 0 protocol models
+INFO:llm.ollama_client:OllamaClient initialized with 8 agent models
+INFO:llm.llm_factory:✅ Created ollama client
+INFO:orchestration.task_decomposer:🔍 Decomposing project requirements (type: api)...
+INFO:llm.ollama_client:Ollama call: deepseek-coder:33b (temp=0.3)
+ERROR:llm.ollama_client:Ollama error (deepseek-coder:33b): timed out
+ERROR:orchestration.task_decomposer:LLM analysis failed: timed out
+WARNING:orchestration.task_decomposer:Using fallback analysis (no LLM)
+INFO:orchestration.task_decomposer:✅ Dependencies added to all tasks
+INFO:orchestration.task_decomposer:✅ Created 9 tasks with dependencies
+INFO:agent_factory.capabilities:CapabilityMatcher zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Connected to Neo4j at bolt://localhost:7687
+INFO:knowledge.neo4j_client:✅ Schema initialized
+INFO:agent_factory.lifecycle:✅ Neo4j knowledge persistence enabled
+INFO:agent_factory.lifecycle:AgentLifecycleManager zainicjalizowany (messaging: enabled, neo4j: enabled)
+INFO:llm.llm_factory:✅ Loaded LLM config from /home/ianua/projects/agent-zero-v1/shared/llm/config.yaml
+INFO:llm.llm_factory:   Default provider: ollama
+INFO:agent_factory.factory:Załadowano szablon: Agent Architekt (typ: architect)
+INFO:agent_factory.factory:Załadowano szablon: Agent Backend Developer (typ: backend)
+INFO:agent_factory.factory:Załadowano szablon: Agent Database Expert (typ: database)
+INFO:agent_factory.factory:Załadowano szablon: Agent DevOps Engineer (typ: devops)
+INFO:agent_factory.factory:Załadowano szablon: Agent Frontend Developer (typ: frontend)
+INFO:agent_factory.factory:Załadowano szablon: Agent Performance Engineer (typ: performance)
+INFO:agent_factory.factory:Załadowano szablon: Agent Security Auditor (typ: security)
+INFO:agent_factory.factory:Załadowano szablon: Agent QA Tester (typ: tester)
+INFO:agent_factory.factory:Załadowano 8 szablonów agentów
+INFO:agent_factory.factory:AgentFactory zainicjalizowana z 8 szablonami
+INFO:agent_factory.capabilities:CapabilityMatcher zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Connected to Neo4j at bolt://localhost:7687
+INFO:knowledge.neo4j_client:✅ Schema initialized
+INFO:agent_factory.lifecycle:✅ Neo4j knowledge persistence enabled
+INFO:agent_factory.lifecycle:AgentLifecycleManager zainicjalizowany (messaging: enabled, neo4j: enabled)
+INFO:orchestration.team_builder:✅ TeamBuilder initialized with 8 agent types
+INFO:orchestration.team_builder:🏗️ Building team for project: user_management_api
+INFO:orchestration.team_builder:📋 Tasks to assign: 9
+INFO:orchestration.team_builder:🤖 Required agent types: {'performance', 'database', 'architect', 'frontend', 'tester', 'devops', 'backend', 'security'}
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.publisher:MessagePublisher zainicjalizowany
+INFO:messaging.consumer:MessageConsumer zainicjalizowany dla performance_1
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=11, family=2, type=1, proto=6, laddr=('127.0.0.1', 47222), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c73f770>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c73f770> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c73f770> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c73f770> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c73f770> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=15, family=2, type=1, proto=6, laddr=('127.0.0.1', 47234), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c662ad0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c662ad0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c662ad0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c662ad0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c662ad0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:messaging.bus:Exchange zadeklarowany: agent_exchange (topic)
+INFO:messaging.bus:Kolejka zadeklarowana: queue.performance_1
+INFO:messaging.bus:Kolejka queue.performance_1 zbindowana z agent_exchange (key: direct.performance_1)
+INFO:messaging.bus:Kolejka queue.performance_1 zbindowana z agent_exchange (key: broadcast.all)
+INFO:messaging.bus:Kolejka queue.performance_1 zbindowana z agent_exchange (key: broadcast.project.*)
+INFO:messaging.bus:Kolejka queue.performance_1 zbindowana z agent_exchange (key: *.urgent.*)
+INFO:messaging.bus:Kolejka queue.performance_1 zbindowana z agent_exchange (key: team.*)
+INFO:messaging.consumer:✅ Kolejka queue.performance_1 skonfigurowana z 5 routing keys
+INFO:messaging.agent_comm:✅ performance_1 połączony z message bus
+INFO:messaging.agent_comm:AgentCommunicator zainicjalizowany dla performance_1
+INFO:agent_factory.lifecycle:Agent performance_1: communicator zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Agent node created: performance_1
+INFO:agent_factory.lifecycle:Agent performance_1: zapisany w Neo4j knowledge graph
+INFO:agent_factory.lifecycle:Utworzono agenta: performance_1 (typ: performance)
+WARNING:agent_factory.factory:Nieznana technologia: query_optimization - pomijam
+INFO:agent_factory.capabilities:Zarejestrowano 4 capabilities dla agenta performance_1
+INFO:agent_factory.lifecycle:Agent performance_1: created -> initializing
+INFO:agent_factory.factory:Inicjalizacja agenta performance_1...
+INFO:agent_factory.factory:  Model: deepseek-coder
+INFO:agent_factory.factory:  Capabilities: 4
+INFO:agent_factory.lifecycle:Agent performance_1: initializing -> ready
+INFO:agent_factory.factory:✅ Agent performance_1 (Agent Performance Engineer) gotowy do pracy
+INFO:orchestration.team_builder:✨ Created new performance: performance_1
+INFO:orchestration.team_builder:✅ Added performance to team: performance_1
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.publisher:MessagePublisher zainicjalizowany
+INFO:messaging.consumer:MessageConsumer zainicjalizowany dla database_2
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=19, family=2, type=1, proto=6, laddr=('127.0.0.1', 47246), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6611d0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6611d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6611d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6611d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6611d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=23, family=2, type=1, proto=6, laddr=('127.0.0.1', 47254), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ea650>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ea650> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ea650> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ea650> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ea650> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:messaging.bus:Exchange zadeklarowany: agent_exchange (topic)
+INFO:messaging.bus:Kolejka zadeklarowana: queue.database_2
+INFO:messaging.bus:Kolejka queue.database_2 zbindowana z agent_exchange (key: direct.database_2)
+INFO:messaging.bus:Kolejka queue.database_2 zbindowana z agent_exchange (key: broadcast.all)
+INFO:messaging.bus:Kolejka queue.database_2 zbindowana z agent_exchange (key: broadcast.project.*)
+INFO:messaging.bus:Kolejka queue.database_2 zbindowana z agent_exchange (key: *.urgent.*)
+INFO:messaging.bus:Kolejka queue.database_2 zbindowana z agent_exchange (key: team.*)
+INFO:messaging.consumer:✅ Kolejka queue.database_2 skonfigurowana z 5 routing keys
+INFO:messaging.agent_comm:✅ database_2 połączony z message bus
+INFO:messaging.agent_comm:AgentCommunicator zainicjalizowany dla database_2
+INFO:agent_factory.lifecycle:Agent database_2: communicator zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Agent node created: database_2
+INFO:agent_factory.lifecycle:Agent database_2: zapisany w Neo4j knowledge graph
+INFO:agent_factory.lifecycle:Utworzono agenta: database_2 (typ: database)
+INFO:agent_factory.capabilities:Zarejestrowano 4 capabilities dla agenta database_2
+INFO:agent_factory.lifecycle:Agent database_2: created -> initializing
+INFO:agent_factory.factory:Inicjalizacja agenta database_2...
+INFO:agent_factory.factory:  Model: deepseek-coder
+INFO:agent_factory.factory:  Capabilities: 4
+INFO:agent_factory.lifecycle:Agent database_2: initializing -> ready
+INFO:agent_factory.factory:✅ Agent database_2 (Agent Database Expert) gotowy do pracy
+INFO:orchestration.team_builder:✨ Created new database: database_2
+INFO:orchestration.team_builder:✅ Added database to team: database_2
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.publisher:MessagePublisher zainicjalizowany
+INFO:messaging.consumer:MessageConsumer zainicjalizowany dla architect_3
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=27, family=2, type=1, proto=6, laddr=('127.0.0.1', 47268), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7eb6f0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7eb6f0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7eb6f0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7eb6f0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7eb6f0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=31, family=2, type=1, proto=6, laddr=('127.0.0.1', 47270), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c626330>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c626330> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c626330> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c626330> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c626330> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:messaging.bus:Exchange zadeklarowany: agent_exchange (topic)
+INFO:messaging.bus:Kolejka zadeklarowana: queue.architect_3
+INFO:messaging.bus:Kolejka queue.architect_3 zbindowana z agent_exchange (key: direct.architect_3)
+INFO:messaging.bus:Kolejka queue.architect_3 zbindowana z agent_exchange (key: broadcast.all)
+INFO:messaging.bus:Kolejka queue.architect_3 zbindowana z agent_exchange (key: broadcast.project.*)
+INFO:messaging.bus:Kolejka queue.architect_3 zbindowana z agent_exchange (key: *.urgent.*)
+INFO:messaging.bus:Kolejka queue.architect_3 zbindowana z agent_exchange (key: team.*)
+INFO:messaging.consumer:✅ Kolejka queue.architect_3 skonfigurowana z 5 routing keys
+INFO:messaging.agent_comm:✅ architect_3 połączony z message bus
+INFO:messaging.agent_comm:AgentCommunicator zainicjalizowany dla architect_3
+INFO:agent_factory.lifecycle:Agent architect_3: communicator zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Agent node created: architect_3
+INFO:agent_factory.lifecycle:Agent architect_3: zapisany w Neo4j knowledge graph
+INFO:agent_factory.lifecycle:Utworzono agenta: architect_3 (typ: architect)
+INFO:agent_factory.capabilities:Zarejestrowano 3 capabilities dla agenta architect_3
+INFO:agent_factory.lifecycle:Agent architect_3: created -> initializing
+INFO:agent_factory.factory:Inicjalizacja agenta architect_3...
+INFO:agent_factory.factory:  Model: deepseek-coder
+INFO:agent_factory.factory:  Capabilities: 3
+INFO:agent_factory.lifecycle:Agent architect_3: initializing -> ready
+INFO:agent_factory.factory:✅ Agent architect_3 (Agent Architekt) gotowy do pracy
+INFO:orchestration.team_builder:✨ Created new architect: architect_3
+INFO:orchestration.team_builder:✅ Added architect to team: architect_3
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.publisher:MessagePublisher zainicjalizowany
+INFO:messaging.consumer:MessageConsumer zainicjalizowany dla frontend_4
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=35, family=2, type=1, proto=6, laddr=('127.0.0.1', 47272), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72fac0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72fac0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72fac0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72fac0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72fac0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=39, family=2, type=1, proto=6, laddr=('127.0.0.1', 47286), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6d89e0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6d89e0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6d89e0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6d89e0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6d89e0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:messaging.bus:Exchange zadeklarowany: agent_exchange (topic)
+INFO:messaging.bus:Kolejka zadeklarowana: queue.frontend_4
+INFO:messaging.bus:Kolejka queue.frontend_4 zbindowana z agent_exchange (key: direct.frontend_4)
+INFO:messaging.bus:Kolejka queue.frontend_4 zbindowana z agent_exchange (key: broadcast.all)
+INFO:messaging.bus:Kolejka queue.frontend_4 zbindowana z agent_exchange (key: broadcast.project.*)
+INFO:messaging.bus:Kolejka queue.frontend_4 zbindowana z agent_exchange (key: *.urgent.*)
+INFO:messaging.bus:Kolejka queue.frontend_4 zbindowana z agent_exchange (key: team.*)
+INFO:messaging.consumer:✅ Kolejka queue.frontend_4 skonfigurowana z 5 routing keys
+INFO:messaging.agent_comm:✅ frontend_4 połączony z message bus
+INFO:messaging.agent_comm:AgentCommunicator zainicjalizowany dla frontend_4
+INFO:agent_factory.lifecycle:Agent frontend_4: communicator zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Agent node created: frontend_4
+INFO:agent_factory.lifecycle:Agent frontend_4: zapisany w Neo4j knowledge graph
+INFO:agent_factory.lifecycle:Utworzono agenta: frontend_4 (typ: frontend)
+INFO:agent_factory.capabilities:Zarejestrowano 4 capabilities dla agenta frontend_4
+INFO:agent_factory.lifecycle:Agent frontend_4: created -> initializing
+INFO:agent_factory.factory:Inicjalizacja agenta frontend_4...
+INFO:agent_factory.factory:  Model: deepseek-coder
+INFO:agent_factory.factory:  Capabilities: 4
+INFO:agent_factory.lifecycle:Agent frontend_4: initializing -> ready
+INFO:agent_factory.factory:✅ Agent frontend_4 (Agent Frontend Developer) gotowy do pracy
+INFO:orchestration.team_builder:✨ Created new frontend: frontend_4
+INFO:orchestration.team_builder:✅ Added frontend to team: frontend_4
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.publisher:MessagePublisher zainicjalizowany
+INFO:messaging.consumer:MessageConsumer zainicjalizowany dla tester_5
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=43, family=2, type=1, proto=6, laddr=('127.0.0.1', 47302), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ce850>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ce850> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ce850> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ce850> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7ce850> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=47, family=2, type=1, proto=6, laddr=('127.0.0.1', 47304), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7cfb50>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7cfb50> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7cfb50> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7cfb50> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c7cfb50> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:messaging.bus:Exchange zadeklarowany: agent_exchange (topic)
+INFO:messaging.bus:Kolejka zadeklarowana: queue.tester_5
+INFO:messaging.bus:Kolejka queue.tester_5 zbindowana z agent_exchange (key: direct.tester_5)
+INFO:messaging.bus:Kolejka queue.tester_5 zbindowana z agent_exchange (key: broadcast.all)
+INFO:messaging.bus:Kolejka queue.tester_5 zbindowana z agent_exchange (key: broadcast.project.*)
+INFO:messaging.bus:Kolejka queue.tester_5 zbindowana z agent_exchange (key: *.urgent.*)
+INFO:messaging.bus:Kolejka queue.tester_5 zbindowana z agent_exchange (key: team.*)
+INFO:messaging.consumer:✅ Kolejka queue.tester_5 skonfigurowana z 5 routing keys
+INFO:messaging.agent_comm:✅ tester_5 połączony z message bus
+INFO:messaging.agent_comm:AgentCommunicator zainicjalizowany dla tester_5
+INFO:agent_factory.lifecycle:Agent tester_5: communicator zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Agent node created: tester_5
+INFO:agent_factory.lifecycle:Agent tester_5: zapisany w Neo4j knowledge graph
+INFO:agent_factory.lifecycle:Utworzono agenta: tester_5 (typ: tester)
+INFO:agent_factory.capabilities:Zarejestrowano 4 capabilities dla agenta tester_5
+INFO:agent_factory.lifecycle:Agent tester_5: created -> initializing
+INFO:agent_factory.factory:Inicjalizacja agenta tester_5...
+INFO:agent_factory.factory:  Model: deepseek-coder
+INFO:agent_factory.factory:  Capabilities: 4
+INFO:agent_factory.lifecycle:Agent tester_5: initializing -> ready
+INFO:agent_factory.factory:✅ Agent tester_5 (Agent QA Tester) gotowy do pracy
+INFO:orchestration.team_builder:✨ Created new tester: tester_5
+INFO:orchestration.team_builder:✅ Added tester to team: tester_5
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.publisher:MessagePublisher zainicjalizowany
+INFO:messaging.consumer:MessageConsumer zainicjalizowany dla devops_6
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=51, family=2, type=1, proto=6, laddr=('127.0.0.1', 47310), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f07d0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f07d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f07d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f07d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f07d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=55, family=2, type=1, proto=6, laddr=('127.0.0.1', 47320), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f19a0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f19a0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f19a0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f19a0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6f19a0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:messaging.bus:Exchange zadeklarowany: agent_exchange (topic)
+INFO:messaging.bus:Kolejka zadeklarowana: queue.devops_6
+INFO:messaging.bus:Kolejka queue.devops_6 zbindowana z agent_exchange (key: direct.devops_6)
+INFO:messaging.bus:Kolejka queue.devops_6 zbindowana z agent_exchange (key: broadcast.all)
+INFO:messaging.bus:Kolejka queue.devops_6 zbindowana z agent_exchange (key: broadcast.project.*)
+INFO:messaging.bus:Kolejka queue.devops_6 zbindowana z agent_exchange (key: *.urgent.*)
+INFO:messaging.bus:Kolejka queue.devops_6 zbindowana z agent_exchange (key: team.*)
+INFO:messaging.consumer:✅ Kolejka queue.devops_6 skonfigurowana z 5 routing keys
+INFO:messaging.agent_comm:✅ devops_6 połączony z message bus
+INFO:messaging.agent_comm:AgentCommunicator zainicjalizowany dla devops_6
+INFO:agent_factory.lifecycle:Agent devops_6: communicator zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Agent node created: devops_6
+INFO:agent_factory.lifecycle:Agent devops_6: zapisany w Neo4j knowledge graph
+INFO:agent_factory.lifecycle:Utworzono agenta: devops_6 (typ: devops)
+INFO:agent_factory.capabilities:Zarejestrowano 5 capabilities dla agenta devops_6
+INFO:agent_factory.lifecycle:Agent devops_6: created -> initializing
+INFO:agent_factory.factory:Inicjalizacja agenta devops_6...
+INFO:agent_factory.factory:  Model: deepseek-coder
+INFO:agent_factory.factory:  Capabilities: 5
+INFO:agent_factory.lifecycle:Agent devops_6: initializing -> ready
+INFO:agent_factory.factory:✅ Agent devops_6 (Agent DevOps Engineer) gotowy do pracy
+INFO:orchestration.team_builder:✨ Created new devops: devops_6
+INFO:orchestration.team_builder:✅ Added devops to team: devops_6
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.publisher:MessagePublisher zainicjalizowany
+INFO:messaging.consumer:MessageConsumer zainicjalizowany dla backend_7
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=59, family=2, type=1, proto=6, laddr=('127.0.0.1', 47332), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cf770>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cf770> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cf770> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cf770> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cf770> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=63, family=2, type=1, proto=6, laddr=('127.0.0.1', 47344), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cc130>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cc130> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cc130> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cc130> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c6cc130> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:messaging.bus:Exchange zadeklarowany: agent_exchange (topic)
+INFO:messaging.bus:Kolejka zadeklarowana: queue.backend_7
+INFO:messaging.bus:Kolejka queue.backend_7 zbindowana z agent_exchange (key: direct.backend_7)
+INFO:messaging.bus:Kolejka queue.backend_7 zbindowana z agent_exchange (key: broadcast.all)
+INFO:messaging.bus:Kolejka queue.backend_7 zbindowana z agent_exchange (key: broadcast.project.*)
+INFO:messaging.bus:Kolejka queue.backend_7 zbindowana z agent_exchange (key: *.urgent.*)
+INFO:messaging.bus:Kolejka queue.backend_7 zbindowana z agent_exchange (key: team.*)
+INFO:messaging.consumer:✅ Kolejka queue.backend_7 skonfigurowana z 5 routing keys
+INFO:messaging.agent_comm:✅ backend_7 połączony z message bus
+INFO:messaging.agent_comm:AgentCommunicator zainicjalizowany dla backend_7
+INFO:agent_factory.lifecycle:Agent backend_7: communicator zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Agent node created: backend_7
+INFO:agent_factory.lifecycle:Agent backend_7: zapisany w Neo4j knowledge graph
+INFO:agent_factory.lifecycle:Utworzono agenta: backend_7 (typ: backend)
+INFO:agent_factory.capabilities:Zarejestrowano 4 capabilities dla agenta backend_7
+INFO:agent_factory.lifecycle:Agent backend_7: created -> initializing
+INFO:agent_factory.factory:Inicjalizacja agenta backend_7...
+INFO:agent_factory.factory:  Model: deepseek-coder
+INFO:agent_factory.factory:  Capabilities: 4
+INFO:agent_factory.lifecycle:Agent backend_7: initializing -> ready
+INFO:agent_factory.factory:✅ Agent backend_7 (Agent Backend Developer) gotowy do pracy
+INFO:orchestration.team_builder:✨ Created new backend: backend_7
+INFO:orchestration.team_builder:✅ Added backend to team: backend_7
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.bus:MessageBus zainicjalizowany (host: localhost)
+INFO:messaging.publisher:MessagePublisher zainicjalizowany
+INFO:messaging.consumer:MessageConsumer zainicjalizowany dla security_8
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=67, family=2, type=1, proto=6, laddr=('127.0.0.1', 47346), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2bcf8ef0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2bcf8ef0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2bcf8ef0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2bcf8ef0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2bcf8ef0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:pika.adapters.utils.connection_workflow:Pika version 1.3.2 connecting to ('127.0.0.1', 5672)
+INFO:pika.adapters.utils.io_services_utils:Socket connected: <socket.socket fd=71, family=2, type=1, proto=6, laddr=('127.0.0.1', 47362), raddr=('127.0.0.1', 5672)>
+INFO:pika.adapters.utils.connection_workflow:Streaming transport linked up: (<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72b1d0>, _StreamingProtocolShim: <SelectConnection PROTOCOL transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72b1d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>).
+INFO:pika.adapters.utils.connection_workflow:AMQPConnector - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72b1d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.utils.connection_workflow:AMQPConnectionWorkflow - reporting success: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72b1d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Connection workflow succeeded: <SelectConnection OPEN transport=<pika.adapters.utils.io_services_utils._AsyncPlaintextTransport object at 0x7f1f2c72b1d0> params=<ConnectionParameters host=localhost port=5672 virtual_host=/ ssl=False>>
+INFO:pika.adapters.blocking_connection:Created channel=1
+INFO:messaging.bus:✅ Połączono z RabbitMQ: localhost:5672
+INFO:messaging.bus:Exchange zadeklarowany: agent_exchange (topic)
+INFO:messaging.bus:Kolejka zadeklarowana: queue.security_8
+INFO:messaging.bus:Kolejka queue.security_8 zbindowana z agent_exchange (key: direct.security_8)
+INFO:messaging.bus:Kolejka queue.security_8 zbindowana z agent_exchange (key: broadcast.all)
+INFO:messaging.bus:Kolejka queue.security_8 zbindowana z agent_exchange (key: broadcast.project.*)
+INFO:messaging.bus:Kolejka queue.security_8 zbindowana z agent_exchange (key: *.urgent.*)
+INFO:messaging.bus:Kolejka queue.security_8 zbindowana z agent_exchange (key: team.*)
+INFO:messaging.consumer:✅ Kolejka queue.security_8 skonfigurowana z 5 routing keys
+INFO:messaging.agent_comm:✅ security_8 połączony z message bus
+INFO:messaging.agent_comm:AgentCommunicator zainicjalizowany dla security_8
+INFO:agent_factory.lifecycle:Agent security_8: communicator zainicjalizowany
+INFO:knowledge.neo4j_client:✅ Agent node created: security_8
+INFO:agent_factory.lifecycle:Agent security_8: zapisany w Neo4j knowledge graph
+INFO:agent_factory.lifecycle:Utworzono agenta: security_8 (typ: security)
+INFO:agent_factory.capabilities:Zarejestrowano 4 capabilities dla agenta security_8
+INFO:agent_factory.lifecycle:Agent security_8: created -> initializing
+INFO:agent_factory.factory:Inicjalizacja agenta security_8...
+INFO:agent_factory.factory:  Model: deepseek-coder
+INFO:agent_factory.factory:  Capabilities: 4
+INFO:agent_factory.lifecycle:Agent security_8: initializing -> ready
+INFO:agent_factory.factory:✅ Agent security_8 (Agent Security Auditor) gotowy do pracy
+INFO:orchestration.team_builder:✨ Created new security: security_8
+INFO:orchestration.team_builder:✅ Added security to team: security_8
+INFO:orchestration.team_builder:📋 Assigned task_0001 to architect_3
+INFO:orchestration.team_builder:📋 Assigned task_0002 to database_2
+INFO:orchestration.team_builder:📋 Assigned task_0003 to security_8
+INFO:orchestration.team_builder:📋 Assigned task_0004 to backend_7
+INFO:orchestration.team_builder:📋 Assigned task_0005 to frontend_4
+INFO:orchestration.team_builder:📋 Assigned task_0006 to tester_5
+INFO:orchestration.team_builder:📋 Assigned task_0007 to security_8
+INFO:orchestration.team_builder:📋 Assigned task_0009 to devops_6
+INFO:orchestration.team_builder:📋 Assigned task_0008 to performance_1
+INFO:orchestration.team_builder:✅ Team built: 8 agents, 9 tasks assigned
+🚀 Testing Orchestration MVP: Task Decomposer + Team Builder
+
+============================================================
+1️⃣ TASK DECOMPOSITION
+============================================================
+
+📋 Requirements:
+
+    Build a REST API for user management with the following features:
+    - User registration and authentication (JWT tokens)
+    - User profile management (CRUD operations)
+    - PostgreSQL database for data storage
+    - Input validation and error handling
+    - Unit tests and integration tests
+    - Docker deployment setup
+    
+
+⏳ Decomposing project into tasks...
+
+✅ Created 9 tasks:
+
+1. [task_0001] System Architecture Design
+   Agent: architect
+   Priority: CRITICAL
+   Complexity: 4/5
+   Est. Duration: 2.0h
+
+2. [task_0002] Database Schema Design
+   Agent: database
+   Priority: CRITICAL
+   Complexity: 3/5
+   Est. Duration: 1.5h
+   Depends on: task_0001
+
+3. [task_0003] Security Architecture
+   Agent: security
+   Priority: HIGH
+   Complexity: 3/5
+   Est. Duration: 1.5h
+   Depends on: task_0001
+
+4. [task_0004] Backend: Core Application
+   Agent: backend
+   Priority: HIGH
+   Complexity: 3/5
+   Est. Duration: 1.5h
+   Depends on: task_0002, task_0003
+
+5. [task_0005] Frontend: Core Application
+   Agent: frontend
+   Priority: HIGH
+   Complexity: 3/5
+   Est. Duration: 1.5h
+   Depends on: task_0004
+
+6. [task_0006] Integration Testing
+   Agent: tester
+   Priority: HIGH
+   Complexity: 3/5
+   Est. Duration: 1.5h
+   Depends on: task_0004, task_0005
+
+7. [task_0007] Security Testing
+   Agent: security
+   Priority: HIGH
+   Complexity: 4/5
+   Est. Duration: 2.0h
+   Depends on: task_0006
+
+8. [task_0008] Performance Optimization
+   Agent: performance
+   Priority: MEDIUM
+   Complexity: 3/5
+   Est. Duration: 1.5h
+   Depends on: task_0006
+
+9. [task_0009] Deployment Setup
+   Agent: devops
+   Priority: HIGH
+   Complexity: 3/5
+   Est. Duration: 1.5h
+   Depends on: task_0006, task_0007, task_0008
+
+============================================================
+2️⃣ DEPENDENCY GRAPH & PARALLEL EXECUTION
+============================================================
+
+📊 Execution Plan (7 phases):
+
+Phase 1 (parallel execution possible):
+  - task_0001: System Architecture Design (architect)
+Phase 2 (parallel execution possible):
+  - task_0002: Database Schema Design (database)
+  - task_0003: Security Architecture (security)
+Phase 3 (parallel execution possible):
+  - task_0004: Backend: Core Application (backend)
+Phase 4 (parallel execution possible):
+  - task_0005: Frontend: Core Application (frontend)
+Phase 5 (parallel execution possible):
+  - task_0006: Integration Testing (tester)
+Phase 6 (parallel execution possible):
+  - task_0007: Security Testing (security)
+  - task_0008: Performance Optimization (performance)
+Phase 7 (parallel execution possible):
+  - task_0009: Deployment Setup (devops)
+
+============================================================
+3️⃣ TEAM BUILDING
+============================================================
+
+🏗️ Building team for project...
+
+✅ Team assembled!
+
+👥 Team Size: 8 agents
+📋 Total Tasks: 9
+
+🤖 Team Members:
+
+  Agent: performance_1
+  Type: performance
+  Assigned Tasks: 1
+  Workload: 1.5h
+
+  Agent: database_2
+  Type: database
+  Assigned Tasks: 1
+  Workload: 1.5h
+
+  Agent: architect_3
+  Type: architect
+  Assigned Tasks: 1
+  Workload: 2.0h
+
+  Agent: frontend_4
+  Type: frontend
+  Assigned Tasks: 1
+  Workload: 1.5h
+
+  Agent: tester_5
+  Type: tester
+  Assigned Tasks: 1
+  Workload: 1.5h
+
+  Agent: devops_6
+  Type: devops
+  Assigned Tasks: 1
+  Workload: 1.5h
+
+  Agent: backend_7
+  Type: backend
+  Assigned Tasks: 1
+  Workload: 1.5h
+
+  Agent: security_8
+  Type: security
+  Assigned Tasks: 2
+  Workload: 3.5h
+
+============================================================
+4️⃣ TASK ASSIGNMENTS
+============================================================
+
+📌 Task → Agent Mapping:
+
+  task_0001: System Architecture Design
+    → architect_3 (architect)
+  task_0002: Database Schema Design
+    → database_2 (database)
+  task_0003: Security Architecture
+    → security_8 (security)
+  task_0004: Backend: Core Application
+    → backend_7 (backend)
+  task_0005: Frontend: Core Application
+    → frontend_4 (frontend)
+  task_0006: Integration Testing
+    → tester_5 (tester)
+  task_0007: Security Testing
+    → security_8 (security)
+  task_0008: Performance Optimization
+    → performance_1 (performance)
+  task_0009: Deployment Setup
+    → devops_6 (devops)
+
+============================================================
+5️⃣ SUMMARY STATISTICS
+============================================================
+
+📊 Project Statistics:
+  Total Tasks: 9
+  Critical Priority: 2
+  High Priority: 6
+  Total Estimated Duration: 14.5h
+  Execution Phases: 7
+  Team Size: 8
+
+🎯 Tasks by Agent Type:
+  architect: 1 tasks
+  backend: 1 tasks
+  database: 1 tasks
+  devops: 1 tasks
+  frontend: 1 tasks
+  performance: 1 tasks
+  security: 2 tasks
+  tester: 1 tasks
+
+============================================================
+✅ TEST COMPLETED SUCCESSFULLY
+============================================================
