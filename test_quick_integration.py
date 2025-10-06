@@ -208,13 +208,10 @@ async def main():
     
     result = await orchestrator.execute_project_full_integration(
         requirements="""
-        Build a REST API for task management with:
-        - User authentication using JWT
-        - CRUD operations for tasks
-        - SQLite database
-        - FastAPI framework
-        - Unit tests with pytest
-        - API documentation
+        Create a simple Python calculator:
+        Add function (a + b)
+        Subtract function (a - b)
+        Only one main.py file
         """,
         project_name="taskmanager_api"
     )
