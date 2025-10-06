@@ -1,5 +1,5 @@
 # Agent Zero v1 - Phase 2: Interactive Control
-# LiveMonitor - Simplified working version
+# LiveMonitor - Enhanced with Token Streaming
 
 import asyncio
 import json
@@ -157,10 +157,12 @@ class TerminalDashboard:
         self.layout = Layout()
         self.agent_updates: Dict[str, AgentUpdate] = {}
         self.start_time = time.time()
+        self.live_output = ""  # NEW: Accumulated live output
         
         self.layout.split_column(
             Layout(name="header", size=3),
-            Layout(name="main", size=15),
+            Layout(name="main", size=12),
+            Layout(name="live_output", size=8),  # NEW: Live token output
             Layout(name="footer", size=3)
         )
         
@@ -191,6 +193,17 @@ class TerminalDashboard:
             )
             
         return Panel(table, title="Agents", border_style="cyan")
+    
+    def _create_live_output_panel(self) -> Panel:
+        """NEW: Create live token output panel"""
+        # Show last 500 characters
+        display_text = self.live_output[-500:] if self.live_output else "Waiting for output..."
+        return Panel(
+            Text(display_text, style="cyan"),
+            title="[bold]🔴 Live Output[/bold]",
+            subtitle="[dim]Token Stream[/dim]",
+            border_style="green"
+        )
         
     def _create_footer(self) -> Panel:
         """Create footer"""
@@ -202,15 +215,20 @@ class TerminalDashboard:
         """Update dashboard"""
         self.layout["header"].update(self._create_header(project_name))
         self.layout["main"].update(self._create_main_panel())
+        self.layout["live_output"].update(self._create_live_output_panel())  # NEW
         self.layout["footer"].update(self._create_footer())
         
     def add_agent_update(self, update: AgentUpdate):
         """Add agent update"""
         self.agent_updates[update.agent_id] = update
+    
+    def append_live_output(self, text: str):
+        """NEW: Append to live output"""
+        self.live_output += text
 
 
 class LiveMonitor:
-    """Real-time agent monitoring system"""
+    """Real-time agent monitoring system with token streaming"""
     
     def __init__(self, checkpoint_manager: Optional[CheckpointManager] = None):
         self.checkpoint_manager = checkpoint_manager or CheckpointManager()
@@ -220,9 +238,12 @@ class LiveMonitor:
         self.is_monitoring = False
         self.is_paused = False
         self.should_stop = False
+        self.current_project = ""  # NEW
         self.user_command_queue = asyncio.Queue()
         self.clarification_responses = {}
         self.update_subscribers: List[Callable[[AgentUpdate], None]] = []
+        
+        self._token_queue = asyncio.Queue()  # NEW: Token streaming queue
         
         self.performance_metrics = {
             'total_tokens': 0,
@@ -239,9 +260,70 @@ class LiveMonitor:
         """Unsubscribe from updates"""
         if callback in self.update_subscribers:
             self.update_subscribers.remove(callback)
+    
+    # NEW METHODS FOR TOKEN STREAMING
+    
+    async def stream_token(self, token: str):
+        """Push token to streaming queue"""
+        await self._token_queue.put(token)
+        self.dashboard.append_live_output(token)
+    
+    async def _stream_agent_outputs(self):
+        """Generator streamujący tokeny od agentów w czasie rzeczywistym"""
+        while not self.should_stop:
+            try:
+                # Get token with timeout
+                chunk = await asyncio.wait_for(self._token_queue.get(), timeout=0.1)
+                yield chunk
+            except asyncio.TimeoutError:
+                continue
+    
+    async def _send_ws_update(self, chunk: str):
+        """Wyślij token do WebSocket dashboardu"""
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=0.5) as client:
+                await client.post(
+                    "http://localhost:8000/ws/token",
+                    json={"token": chunk, "project": self.current_project}
+                )
+        except:
+            pass  # WebSocket offline - OK
+    
+    async def start_monitoring_live(self, project_name: str):
+        """Monitoring z live streaming tokenów"""
+        self.current_project = project_name
+        self.should_stop = False
+        self.is_monitoring = True
+        self.dashboard.start_time = time.time()
+        
+        self.console.print(f"[bold green]🎬 Live Monitoring: {project_name}[/bold green]")
+        self.console.print("[yellow]Naciśnij Ctrl+C aby zatrzymać test[/yellow]\n")
+        
+        try:
+            with Live(self.dashboard.layout, console=self.console, refresh_per_second=10) as live:
+                while self.is_monitoring and not self.should_stop:
+                    self.dashboard.update_display(project_name)
+                    
+                    # Process token queue
+                    while not self._token_queue.empty():
+                        try:
+                            chunk = self._token_queue.get_nowait()
+                            self.dashboard.append_live_output(chunk)
+                            await self._send_ws_update(chunk)
+                        except asyncio.QueueEmpty:
+                            break
+                    
+                    await asyncio.sleep(0.1)
+                    
+        except KeyboardInterrupt:
+            self.console.print("\n[red bold]⏹️ Test przerwany przez użytkownika[/red bold]")
+            self.should_stop = True
+        
+        self.console.print(f"\n[green]✅ Monitoring zakończony[/green]")
             
     async def start_monitoring(self, project_name: str) -> None:
-        """Start monitoring"""
+        """Start monitoring (standard version)"""
         self.is_monitoring = True
         self.dashboard.start_time = time.time()
         
