@@ -1,0 +1,208 @@
+# Agent Zero V1 Environment Configuration Template
+# Copy this to .env and customize for your environment
+
+# ===================================================================
+# Neo4j Database Configuration
+# ===================================================================
+
+# Neo4j Connection URI
+NEO4J_URI=bolt://localhost:7687
+
+# Neo4j Authentication
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=agent_zero_2024!
+
+# Neo4j Database Name
+NEO4J_DATABASE=neo4j
+
+# Neo4j Connection Pool Settings
+NEO4J_MAX_CONNECTIONS=50
+NEO4J_CONNECTION_TIMEOUT=30
+NEO4J_MAX_RETRY_ATTEMPTS=3
+NEO4J_RETRY_DELAY=1.0
+NEO4J_ENCRYPTED=false
+NEO4J_TRUST=TRUST_ALL_CERTIFICATES
+
+# ===================================================================
+# RabbitMQ Message Broker Configuration  
+# ===================================================================
+
+# RabbitMQ Connection
+RABBITMQ_URL=amqp://localhost:5672
+RABBITMQ_USER=agent_zero
+RABBITMQ_PASSWORD=agent_zero_2024!
+
+# RabbitMQ Management
+RABBITMQ_MGMT_URL=http://localhost:15672
+
+# ===================================================================
+# Agent Zero V1 Application Configuration
+# ===================================================================
+
+# Environment Mode
+ENVIRONMENT=production
+
+# Python Configuration
+PYTHONPATH=/app
+PYTHONUNBUFFERED=1
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FILE=/app/logs/agent_zero.log
+
+# ===================================================================
+# API Gateway Configuration
+# ===================================================================
+
+# API Gateway Settings
+API_GATEWAY_HOST=0.0.0.0
+API_GATEWAY_PORT=8000
+API_GATEWAY_WORKERS=4
+
+# API Security
+API_SECRET_KEY=agent_zero_v1_super_secret_key_2024
+API_CORS_ORIGINS=["http://localhost:3000", "http://localhost:8000"]
+
+# ===================================================================
+# Agent Orchestrator Configuration
+# ===================================================================
+
+# Orchestrator Settings
+ORCHESTRATOR_MAX_AGENTS=50
+ORCHESTRATOR_TASK_TIMEOUT=300
+ORCHESTRATOR_RETRY_ATTEMPTS=3
+
+# Agent Factory Settings
+AGENT_FACTORY_POOL_SIZE=10
+AGENT_FACTORY_INIT_TIMEOUT=30
+
+# ===================================================================
+# Docker Configuration
+# ===================================================================
+
+# Docker Compose Project Name
+COMPOSE_PROJECT_NAME=agent-zero-v1
+
+# Docker Network
+DOCKER_NETWORK=agent-zero-network
+
+# Resource Limits
+NEO4J_MEMORY_LIMIT=4G
+NEO4J_CPU_LIMIT=2.0
+RABBITMQ_MEMORY_LIMIT=1G
+API_GATEWAY_MEMORY_LIMIT=512M
+
+# ===================================================================
+# File System Configuration
+# ===================================================================
+
+# Output Directories
+AGENT_OUTPUT_DIR=/tmp/agent_zero_output
+AGENT_LOGS_DIR=/var/log/agent_zero
+AGENT_CONFIG_DIR=/etc/agent_zero
+
+# Shared Directories
+SHARED_KNOWLEDGE_DIR=/app/shared/knowledge
+SHARED_EXECUTION_DIR=/app/shared/execution
+
+# ===================================================================
+# Performance Tuning
+# ===================================================================
+
+# Agent Execution
+MAX_CONCURRENT_TASKS=20
+TASK_EXECUTION_TIMEOUT=300
+TASK_RETRY_DELAY=1.0
+
+# Knowledge Base
+KNOWLEDGE_CACHE_SIZE=1000
+KNOWLEDGE_CACHE_TTL=3600
+
+# Communication
+MESSAGE_BATCH_SIZE=100
+MESSAGE_PROCESSING_TIMEOUT=30
+
+# ===================================================================
+# Monitoring and Health Checks
+# ===================================================================
+
+# Health Check Configuration
+HEALTH_CHECK_INTERVAL=30
+HEALTH_CHECK_TIMEOUT=10
+HEALTH_CHECK_RETRIES=3
+
+# Metrics Collection
+METRICS_ENABLED=true
+METRICS_PORT=9090
+METRICS_PATH=/metrics
+
+# ===================================================================
+# Development and Debug Configuration
+# ===================================================================
+
+# Debug Mode
+DEBUG=false
+VERBOSE_LOGGING=false
+
+# Development Tools
+ENABLE_PROFILING=false
+ENABLE_TRACING=false
+
+# Testing
+TEST_MODE=false
+MOCK_EXTERNAL_SERVICES=false
+
+# ===================================================================
+# Security Configuration
+# ===================================================================
+
+# JWT Configuration
+JWT_SECRET_KEY=agent_zero_jwt_secret_2024
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_HOURS=24
+
+# Rate Limiting
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS_PER_MINUTE=60
+
+# CORS Configuration
+CORS_ENABLED=true
+CORS_ALLOW_CREDENTIALS=true
+
+# ===================================================================
+# Integration Configuration
+# ===================================================================
+
+# External APIs
+EXTERNAL_API_TIMEOUT=30
+EXTERNAL_API_RETRY_ATTEMPTS=3
+
+# Webhook Configuration
+WEBHOOK_ENABLED=false
+WEBHOOK_SECRET=agent_zero_webhook_secret
+
+# ===================================================================
+# Backup and Recovery
+# ===================================================================
+
+# Backup Configuration
+BACKUP_ENABLED=true
+BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
+BACKUP_RETENTION_DAYS=7
+
+# Recovery Settings
+AUTO_RECOVERY_ENABLED=true
+RECOVERY_TIMEOUT=300
+
+# ===================================================================
+# Custom Agent Configuration
+# ===================================================================
+
+# Agent Types
+AVAILABLE_AGENT_TYPES=["orchestrator", "worker", "analyzer", "executor"]
+DEFAULT_AGENT_TYPE=worker
+
+# Agent Lifecycle
+AGENT_STARTUP_TIMEOUT=60
+AGENT_SHUTDOWN_TIMEOUT=30
+AGENT_HEARTBEAT_INTERVAL=10

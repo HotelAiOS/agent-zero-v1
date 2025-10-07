@@ -3,3 +3,13 @@ __pycache__/
 *.pyo
 *.backup
 *.save
+# Neo4j runtime files
+data/
+logs/
+*.log
+checkpoints/*.json
+# Neo4j runtime files
+data/
+logs/
+*.log
+checkpoints/*.json
