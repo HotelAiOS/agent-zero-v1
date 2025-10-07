@@ -1,205 +1,92 @@
-# Agent Zero V1 - Neo4j Service Connection Fix
-# Production-ready Docker Compose configuration
-# Version: 1.0 - Critical Neo4j Connection Issue Resolution
-
 
 services:
-  # Neo4j Graph Database Service
+  # Neo4j Graph Database - FIXED VERSION
   neo4j:
-    image: neo4j:5.26-community
+    image: neo4j:5.11-community
     container_name: agent-zero-neo4j
-    hostname: neo4j
     restart: unless-stopped
-    
-    # Environment Configuration
+    ports:
+      - "7474:7474"  # HTTP Browser
+      - "7687:7687"  # Bolt Protocol
     environment:
       # Authentication
-      - NEO4J_AUTH=neo4j/agent_zero_2024!
+      NEO4J_AUTH: neo4j/agent_zero_neo4j_dev
       
-      # Memory Configuration (Production Optimized)
-      - NEO4J_server_memory_pagecache_size=2G
-      - NEO4J_server_memory_heap_initial_size=1G
-      - NEO4J_server_memory_heap_max_size=2G
+      # Memory settings for development
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 1G
+      NEO4J_dbms_memory_pagecache_size: 512m
       
-      # Network Configuration
-      - NEO4J_server_default_listen_address=0.0.0.0
-      - NEO4J_server_bolt_listen_address=0.0.0.0:7687
-      - NEO4J_server_http_listen_address=0.0.0.0:7474
+      # Network settings
+      NEO4J_dbms_default__listen__address: 0.0.0.0
+      NEO4J_dbms_connector_bolt_listen__address: 0.0.0.0:7687
+      NEO4J_dbms_connector_http_listen__address: 0.0.0.0:7474
       
-      # Connector Configuration
-      - NEO4J_server_bolt_advertised_address=neo4j:7687
-      - NEO4J_server_http_advertised_address=neo4j:7474
+      # APOC procedures (if needed)
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*
       
-      # Security Configuration
-      - NEO4J_server_connector_bolt_tls_level=DISABLED
-      - NEO4J_server_connector_http_enabled=true
-      - NEO4J_server_connector_bolt_enabled=true
-      
-      # Logging
-      - NEO4J_server_logs_debug_level=INFO
-      - NEO4J_server_logs_gc_enabled=false
-      
-      # Performance Optimizations
-      - NEO4J_server_db_checkpoint_interval_time=300s
-      - NEO4J_server_db_checkpoint_interval_tx=100000
-      
-    # Port Mapping
-    ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
-      
-    # Volume Mounts
+      # Transaction timeout
+      NEO4J_dbms_transaction_timeout: 60s
     volumes:
-      - neo4j_data:/data
-      - neo4j_logs:/logs
-      - neo4j_import:/import
-      - neo4j_plugins:/plugins
-      - ./configs/neo4j-production.conf:/var/lib/neo4j/conf/neo4j.conf:ro
-      
-    # Health Check Configuration
+      - ./data/neo4j:/data
+      - ./logs/neo4j:/logs
+      - ./import:/import
+      - ./plugins:/plugins
     healthcheck:
-      test: >
-        /bin/bash -c "
-        timeout 10s bash -c '
-          echo \"MATCH (n) RETURN count(n) as count\" | 
-          /var/lib/neo4j/bin/cypher-shell -u neo4j -p agent_zero_2024! -a bolt://localhost:7687 > /dev/null 2>&1
-        ' || exit 1"
-      interval: 30s
-      timeout: 15s
-      retries: 5
-      start_period: 60s
-      
-    # Network Configuration
-    networks:
-      - agent-zero-network
-      
-    # Resource Limits
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: '2.0'
-        reservations:
-          memory: 2G
-          cpus: '1.0'
-
-  # Agent Zero API Gateway Service
-  api-gateway:
-    build:
-      context: .
-      dockerfile: docker/api-gateway/Dockerfile
-    container_name: agent-zero-api-gateway
-    hostname: api-gateway
-    restart: unless-stopped
-    
-    environment:
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=agent_zero_2024!
-      - PYTHONPATH=/app
-      - ENVIRONMENT=production
-      
-    ports:
-      - "8000:8000"
-      
-    volumes:
-      - ./shared:/app/shared:ro
-      - ./configs:/app/configs:ro
-      - agent_logs:/app/logs
-      
-    depends_on:
-      neo4j:
-        condition: service_healthy
-        
-    networks:
-      - agent-zero-network
-      
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
       retries: 3
+      start_period: 40s
 
-  # Agent Orchestrator Service
-  agent-orchestrator:
-    build:
-      context: .
-      dockerfile: docker/orchestrator/Dockerfile
-    container_name: agent-zero-orchestrator
-    hostname: orchestrator
-    restart: unless-stopped
-    
+  # PostgreSQL Database (if needed)
+  postgres:
+    image: postgres:15-alpine
+    container_name: agent-zero-postgres
     environment:
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=agent_zero_2024!
-      - RABBITMQ_URL=amqp://rabbitmq:5672
-      - PYTHONPATH=/app
-      - ENVIRONMENT=production
-      
+      POSTGRES_DB: agent_zero
+      POSTGRES_USER: agent_zero
+      POSTGRES_PASSWORD: agent_zero_dev_password
+    ports:
+      - "5433:5432"
     volumes:
-      - ./shared:/app/shared:ro
-      - ./services/orchestrator:/app/orchestrator:ro
-      - agent_logs:/app/logs
-      - agent_output:/app/output
-      
-    depends_on:
-      neo4j:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-        
-    networks:
-      - agent-zero-network
-
-  # RabbitMQ Message Broker
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    container_name: agent-zero-rabbitmq
-    hostname: rabbitmq
+      - ./data/postgres:/var/lib/postgresql/data
     restart: unless-stopped
-    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent_zero -d agent_zero"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker (if needed)
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: agent-zero-rabbitmq
     environment:
-      - RABBITMQ_DEFAULT_USER=agent_zero
-      - RABBITMQ_DEFAULT_PASS=agent_zero_2024!
-      
+      RABBITMQ_DEFAULT_USER: agent_zero
+      RABBITMQ_DEFAULT_PASS: agent_zero_rabbit_dev
+      RABBITMQ_DEFAULT_VHOST: agent_zero_vhost
     ports:
       - "5672:5672"   # AMQP
       - "15672:15672" # Management UI
-      
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-      
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    restart: unless-stopped
     healthcheck:
-      test: rabbitmq-diagnostics -q ping
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
       retries: 3
-      
-    networks:
-      - agent-zero-network
 
-# Named Volumes
 volumes:
   neo4j_data:
     driver: local
-  neo4j_logs:
-    driver: local
-  neo4j_import:
-    driver: local
-  neo4j_plugins:
+  postgres_data:
     driver: local
   rabbitmq_data:
     driver: local
-  agent_logs:
-    driver: local
-  agent_output:
-    driver: local
 
-# Networks
 networks:
-  agent-zero-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+  default:
+    name: agent-zero-network
