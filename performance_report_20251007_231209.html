@@ -1,0 +1,349 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Agent Zero V1 - Performance Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; text-align: center; }
+            .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0; }
+            .metric-card { border: 1px solid #ddd; border-radius: 10px; padding: 20px; background: #f8f9fa; }
+            .metric-title { font-size: 1.3em; font-weight: bold; margin-bottom: 15px; color: #333; }
+            .metric-value { font-size: 2em; font-weight: bold; color: #007bff; }
+            .metric-unit { font-size: 0.8em; color: #666; }
+            .success { color: #28a745; }
+            .warning { color: #ffc107; }
+            .error { color: #dc3545; }
+            .performance-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+            .performance-table th, .performance-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            .performance-table th { background-color: #f2f2f2; }
+            .summary { background: #e7f3ff; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🚀 Agent Zero V1 - Performance Report</h1>
+            <p>Generated: 2025-10-07 23:12:09</p>
+        </div>
+        
+        <div class="summary">
+            <h2>📊 Executive Summary</h2>
+            <p>Performance benchmark completed for all Agent Zero V1 components. Key findings:</p>
+            <ul>
+    <li class='success'>✅ WebSocket connections: Excellent (0.000s avg)</li><li class='success'>✅ Neo4j queries: Excellent (0.000s avg)</li>
+            </ul>
+        </div>
+        
+        <div class="metric-grid">
+    
+            <div class="metric-card">
+                <div class="metric-title">🌐 WebSocket Performance</div>
+                <div class="metric-value">0.000<span class="metric-unit">s</span></div>
+                <p>Average connection time</p>
+                <p>Success rate: 0/20 (0.0%)</p>
+            </div>
+        
+            <div class="metric-card">
+                <div class="metric-title">💾 Neo4j Performance</div>
+                <div class="metric-value">0.000<span class="metric-unit">s</span></div>
+                <p>Average query time</p>
+                <p>Query success rate: 0.0%</p>
+            </div>
+        
+            <div class="metric-card">
+                <div class="metric-title">🧠 JSON Parsing</div>
+                <div class="metric-value">9280<span class="metric-unit">/s</span></div>
+                <p>Parses per second</p>
+                <p>Success rate: 100.0%</p>
+            </div>
+        
+            <div class="metric-card">
+                <div class="metric-title">🖥️ System Resources</div>
+                <div class="metric-value">0.0<span class="metric-unit">%</span></div>
+                <p>Average CPU usage</p>
+                <p>Memory: 0.0% avg, 0.0% peak</p>
+            </div>
+        
+        </div>
+        
+        <h2>📋 Detailed Results</h2>
+    
+                <h3>Websocket Connection</h3>
+                <table class="performance-table">
+            
+                        <tr>
+                            <td>Total Attempts</td>
+                            <td>20.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Successful Connections</td>
+                            <td>0.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Failure Rate</td>
+                            <td>100.00%</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Avg Connection Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Min Connection Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Max Connection Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    </table>
+                <h3>Websocket Throughput</h3>
+                <table class="performance-table">
+            
+                        <tr>
+                            <td>Total Messages</td>
+                            <td>200.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Successful Messages</td>
+                            <td>0.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Total Time</td>
+                            <td>0.0010s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Messages Per Second</td>
+                            <td>0.00/s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Avg Response Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Min Response Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Max Response Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>P95 Response Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Failure Rate</td>
+                            <td>100.00%</td>
+                        </tr>
+                    </table>
+                <h3>Neo4J Performance</h3>
+                <table class="performance-table">
+            
+                        <tr>
+                            <td>Total Attempts</td>
+                            <td>30.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Successful Connections</td>
+                            <td>30.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Successful Queries</td>
+                            <td>0.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Avg Connection Time</td>
+                            <td>0.0003s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Avg Query Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Max Connection Time</td>
+                            <td>0.0004s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Max Query Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Connection Success Rate</td>
+                            <td>100.00%</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Query Success Rate</td>
+                            <td>0.00%</td>
+                        </tr>
+                    </table>
+                <h3>Json Parsing</h3>
+                <table class="performance-table">
+            
+                        <tr>
+                            <td>Total Tests</td>
+                            <td>250.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Test Cases</td>
+                            <td>5.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Iterations Per Case</td>
+                            <td>50.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Avg Parsing Time</td>
+                            <td>0.0001s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Max Parsing Time</td>
+                            <td>0.0011s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Min Parsing Time</td>
+                            <td>0.0000s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Overall Success Rate</td>
+                            <td>100.00%</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Parses Per Second</td>
+                            <td>9279.52/s</td>
+                        </tr>
+                    </table>
+                <h3>Task Decomposition</h3>
+                <table class="performance-table">
+            
+                        <tr>
+                            <td>Total Decompositions</td>
+                            <td>15.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Successful Decompositions</td>
+                            <td>15.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Success Rate</td>
+                            <td>100.00%</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Avg Decomposition Time</td>
+                            <td>0.0002s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Max Decomposition Time</td>
+                            <td>0.0003s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Min Decomposition Time</td>
+                            <td>0.0002s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Avg Subtasks Per Task</td>
+                            <td>3.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Max Subtasks</td>
+                            <td>3.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Decompositions Per Second</td>
+                            <td>4436.23/s</td>
+                        </tr>
+                    </table>
+                <h3>Agent Execution</h3>
+                <table class="performance-table">
+            
+                        <tr>
+                            <td>Total Executions</td>
+                            <td>30.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Successful Executions</td>
+                            <td>30.00</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Success Rate</td>
+                            <td>100.00%</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Avg Execution Time</td>
+                            <td>0.1002s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Max Execution Time</td>
+                            <td>0.1004s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Min Execution Time</td>
+                            <td>0.1001s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Executions Per Second</td>
+                            <td>9.98/s</td>
+                        </tr>
+                    
+                        <tr>
+                            <td>Throughput</td>
+                            <td>9.98</td>
+                        </tr>
+                    </table>
+                <h3>System Metrics</h3>
+                <table class="performance-table">
+            </table>
+        <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+            <h3>📈 Recommendations</h3>
+            <ul>
+                <li><strong>WebSocket:</strong> Consider connection pooling if average connection time > 1s</li>
+                <li><strong>Database:</strong> Monitor Neo4j query performance and add indexes if needed</li>
+                <li><strong>Task Decomposer:</strong> JSON parsing success rate should be > 95%</li>
+                <li><strong>System:</strong> CPU usage should remain < 80% under normal load</li>
+            </ul>
+        </div>
+        
+    </body>
+    </html>
+    

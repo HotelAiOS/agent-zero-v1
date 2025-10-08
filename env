@@ -1,0 +1,284 @@
+# Agent Zero V1 - Environment Configuration
+# Production-ready configuration for all services
+
+# ==============================================
+# CORE APPLICATION SETTINGS
+# ==============================================
+
+# Application
+APP_NAME="Agent Zero V1"
+APP_VERSION="1.0.0"
+APP_ENVIRONMENT="production"
+APP_DEBUG=false
+APP_HOST="0.0.0.0"
+APP_PORT=8000
+
+# Logging
+LOG_LEVEL="INFO"
+LOG_FORMAT="json"
+LOG_FILE="/app/logs/agent_zero.log"
+LOG_ROTATION="midnight"
+LOG_RETENTION=30
+
+# Security
+SECRET_KEY="your-super-secret-key-change-this-in-production"
+JWT_SECRET_KEY="your-jwt-secret-key-change-this-too"
+JWT_ALGORITHM="HS256"
+JWT_EXPIRATION_HOURS=24
+
+# ==============================================
+# DATABASE CONNECTIONS
+# ==============================================
+
+# Neo4j Graph Database
+NEO4J_URI="bolt://localhost:7687"
+NEO4J_USERNAME="neo4j"
+NEO4J_PASSWORD="agentzerov1"
+NEO4J_DATABASE="neo4j"
+NEO4J_MAX_CONNECTION_LIFETIME=3600
+NEO4J_MAX_CONNECTION_POOL_SIZE=50
+NEO4J_CONNECTION_ACQUISITION_TIMEOUT=60
+
+# Redis Cache
+REDIS_HOST="localhost"
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_PASSWORD=""
+REDIS_TIMEOUT=5
+REDIS_MAX_CONNECTIONS=20
+
+# ==============================================
+# MESSAGE BROKER
+# ==============================================
+
+# RabbitMQ Configuration
+RABBITMQ_HOST="localhost"
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME="agentzerov1"
+RABBITMQ_PASSWORD="agentzerov1"
+RABBITMQ_VIRTUAL_HOST="agent_zero"
+RABBITMQ_MANAGEMENT_PORT=15672
+
+# Queue Configuration
+RABBITMQ_TASK_QUEUE="agent_tasks"
+RABBITMQ_RESULT_QUEUE="agent_results"
+RABBITMQ_NOTIFICATION_QUEUE="notifications"
+RABBITMQ_PREFETCH_COUNT=10
+
+# ==============================================
+# AI/LLM INTEGRATION
+# ==============================================
+
+# OpenAI Configuration
+OPENAI_API_KEY="your-openai-api-key"
+OPENAI_MODEL="gpt-4"
+OPENAI_MAX_TOKENS=4000
+OPENAI_TEMPERATURE=0.7
+OPENAI_TIMEOUT=60
+
+# Anthropic Claude Configuration
+ANTHROPIC_API_KEY="your-anthropic-api-key"
+ANTHROPIC_MODEL="claude-3-sonnet-20240229"
+ANTHROPIC_MAX_TOKENS=4000
+
+# Local LLM (Ollama) Configuration
+OLLAMA_HOST="http://localhost:11434"
+OLLAMA_MODEL="deepseek-coder:33b"
+OLLAMA_TIMEOUT=120
+OLLAMA_NUM_CTX=4096
+
+# ==============================================
+# WEBSOCKET SETTINGS
+# ==============================================
+
+# WebSocket Monitor
+WEBSOCKET_HOST="0.0.0.0"
+WEBSOCKET_PORT=8000
+WEBSOCKET_PATH="/ws"
+WEBSOCKET_ORIGINS="*"
+WEBSOCKET_PING_INTERVAL=30
+WEBSOCKET_PING_TIMEOUT=10
+WEBSOCKET_MAX_CONNECTIONS=100
+
+# ==============================================
+# AGENT CONFIGURATION
+# ==============================================
+
+# Agent System
+MAX_CONCURRENT_AGENTS=8
+AGENT_TIMEOUT=300
+AGENT_RETRY_ATTEMPTS=3
+AGENT_HEARTBEAT_INTERVAL=30
+
+# Task Decomposer
+TASK_DECOMPOSER_MAX_DEPTH=5
+TASK_DECOMPOSER_MAX_SUBTASKS=20
+TASK_DECOMPOSER_TIMEOUT=60
+
+# Code Generator
+CODE_GENERATOR_MAX_FILES=50
+CODE_GENERATOR_MAX_SIZE_MB=10
+CODE_GENERATOR_TIMEOUT=120
+
+# ==============================================
+# MONITORING & PERFORMANCE
+# ==============================================
+
+# Prometheus Metrics
+PROMETHEUS_ENABLED=true
+PROMETHEUS_PORT=9091
+PROMETHEUS_METRICS_PATH="/metrics"
+
+# Performance Settings
+MAX_WORKERS=4
+WORKER_TIMEOUT=30
+KEEP_ALIVE_TIMEOUT=5
+MAX_REQUESTS=1000
+MAX_REQUESTS_JITTER=50
+
+# Health Checks
+HEALTH_CHECK_INTERVAL=30
+HEALTH_CHECK_TIMEOUT=10
+HEALTH_CHECK_RETRIES=3
+
+# ==============================================
+# FILE SYSTEM & STORAGE
+# ==============================================
+
+# Directories
+BASE_DIR="/app"
+LOGS_DIR="/app/logs"
+TEMP_DIR="/app/temp"
+OUTPUT_DIR="/app/output"
+UPLOAD_DIR="/app/uploads"
+BACKUP_DIR="/app/backups"
+
+# File Limits
+MAX_UPLOAD_SIZE_MB=100
+MAX_OUTPUT_FILES=1000
+TEMP_FILE_RETENTION_HOURS=24
+
+# ==============================================
+# DOCKER & DEPLOYMENT
+# ==============================================
+
+# Docker Configuration
+DOCKER_HOST="unix:///var/run/docker.sock"
+DOCKER_API_VERSION="1.41"
+DOCKER_TIMEOUT=60
+
+# Deployment
+DEPLOYMENT_MODE="docker"
+SCALE_FACTOR=1
+AUTO_RESTART=true
+GRACEFUL_SHUTDOWN_TIMEOUT=30
+
+# ==============================================
+# DEVELOPMENT SETTINGS
+# ==============================================
+
+# Development Mode (set to false in production)
+DEVELOPMENT_MODE=false
+AUTO_RELOAD=false
+SHOW_DOCS=false
+
+# Testing
+TEST_DATABASE_URL="sqlite:///test.db"
+TEST_TIMEOUT=30
+MOCK_EXTERNAL_APIS=false
+
+# ==============================================
+# ARCH LINUX SPECIFIC
+# ==============================================
+
+# System Integration
+SYSTEMD_SERVICE=true
+SYSTEMD_USER="agent-zero"
+SYSTEMD_GROUP="agent-zero"
+
+# Fish Shell Integration
+FISH_COMPLETION=true
+FISH_CONFIG_DIR="/home/ianua/.config/fish"
+
+# Package Manager
+PACMAN_CACHE_DIR="/var/cache/pacman/pkg"
+AUR_HELPER="yay"
+
+# ==============================================
+# BACKUP & RECOVERY
+# ==============================================
+
+# Backup Configuration
+BACKUP_ENABLED=true
+BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
+BACKUP_RETENTION_DAYS=30
+BACKUP_COMPRESSION=true
+
+# Recovery Settings
+RECOVERY_MODE=false
+RECOVERY_POINT=""
+AUTO_RECOVERY=true
+
+# ==============================================
+# NETWORK & SECURITY
+# ==============================================
+
+# Network Settings
+ALLOWED_HOSTS="localhost,127.0.0.1,0.0.0.0"
+CORS_ORIGINS="http://localhost:3000,http://localhost:8000"
+CORS_METHODS="GET,POST,PUT,DELETE,OPTIONS"
+CORS_HEADERS="*"
+
+# Security Headers
+SECURITY_HEADERS_ENABLED=true
+HTTPS_REDIRECT=false
+SECURE_COOKIES=false
+CSRF_PROTECTION=true
+
+# Rate Limiting
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=60
+
+# ==============================================
+# NOTIFICATION SETTINGS
+# ==============================================
+
+# Email Notifications
+EMAIL_ENABLED=false
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USERNAME=""
+SMTP_PASSWORD=""
+SMTP_USE_TLS=true
+
+# Slack Integration
+SLACK_ENABLED=false
+SLACK_WEBHOOK_URL=""
+SLACK_CHANNEL="#agent-zero"
+
+# Discord Integration
+DISCORD_ENABLED=false
+DISCORD_WEBHOOK_URL=""
+
+# ==============================================
+# CUSTOM SETTINGS
+# ==============================================
+
+# Project Specific
+PROJECT_NAME="Agent Zero V1"
+PROJECT_REPO="https://github.com/HotelAiOS/agent-zero-v1"
+PROJECT_AUTHOR="Agent Zero Team"
+PROJECT_VERSION="1.0.0"
+
+# Feature Flags
+FEATURE_ADVANCED_MONITORING=true
+FEATURE_AUTO_SCALING=false
+FEATURE_EXPERIMENTAL_AGENTS=false
+FEATURE_API_VERSIONING=true
+
+# Integration Flags
+INTEGRATION_NOTION=true
+INTEGRATION_GITHUB=true
+INTEGRATION_JIRA=false
+INTEGRATION_CONFLUENCE=false

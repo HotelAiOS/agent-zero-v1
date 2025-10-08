@@ -1,0 +1,96 @@
+{
+  "websocket_connection": {
+    "total_attempts": 20,
+    "successful_connections": 0,
+    "failure_rate": 100.0,
+    "avg_connection_time": 0,
+    "min_connection_time": 0,
+    "max_connection_time": 0,
+    "connection_times": [
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity,
+      Infinity
+    ]
+  },
+  "websocket_throughput": {
+    "total_messages": 200,
+    "successful_messages": 0,
+    "total_time": 0.0010063648223876953,
+    "messages_per_second": 0.0,
+    "avg_response_time": 0,
+    "min_response_time": 0,
+    "max_response_time": 0,
+    "p95_response_time": 0,
+    "failure_rate": 100.0
+  },
+  "neo4j_performance": {
+    "total_attempts": 30,
+    "successful_connections": 30,
+    "successful_queries": 0,
+    "avg_connection_time": 0.0003255049387613932,
+    "avg_query_time": 0,
+    "max_connection_time": 0.00040793418884277344,
+    "max_query_time": 0,
+    "connection_success_rate": 100.0,
+    "query_success_rate": 0.0
+  },
+  "redis_performance": {
+    "error": "Redis test failed: Error 111 connecting to localhost:6379. Connection refused."
+  },
+  "json_parsing": {
+    "total_tests": 250,
+    "test_cases": 5,
+    "iterations_per_case": 50,
+    "avg_parsing_time": 0.00010776424407958984,
+    "max_parsing_time": 0.0011112689971923828,
+    "min_parsing_time": 3.933906555175781e-05,
+    "success_rates": [
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      100.0
+    ],
+    "overall_success_rate": 100.0,
+    "parses_per_second": 9279.515747926973
+  },
+  "task_decomposition": {
+    "total_decompositions": 15,
+    "successful_decompositions": 15,
+    "success_rate": 100.0,
+    "avg_decomposition_time": 0.0002254168192545573,
+    "max_decomposition_time": 0.00029397010803222656,
+    "min_decomposition_time": 0.00017261505126953125,
+    "avg_subtasks_per_task": 3,
+    "max_subtasks": 3,
+    "decompositions_per_second": 4436.226202228177
+  },
+  "agent_execution": {
+    "total_executions": 30,
+    "successful_executions": 30,
+    "success_rate": 100.0,
+    "avg_execution_time": 0.10018211205800374,
+    "max_execution_time": 0.10036015510559082,
+    "min_execution_time": 0.1000986099243164,
+    "executions_per_second": 9.981821898713983,
+    "throughput": 9.981821898713983
+  },
+  "system_metrics": {}
+}
