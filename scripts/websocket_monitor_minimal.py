@@ -2,7 +2,7 @@
 """
 Agent Zero V1 - Minimal WebSocket Monitor
 =========================================
-Uproszczony WebSocket monitor z zaawansowanym interfejsem web.
+Uproszczony WebSocket monitor bez zbędnych dependencies.
 """
 
 import asyncio
@@ -42,154 +42,86 @@ class MinimalWebSocketMonitor:
             cors.add(route)
     
     async def index(self, request):
-        """Serve advanced HTML monitoring interface."""
+        """Serve basic HTML page."""
         html = '''<!DOCTYPE html>
 <html>
 <head>
     <title>Agent Zero V1 Monitor</title>
     <style>
         body { 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            margin: 0; padding: 20px;
-            background: linear-gradient(135deg, #1a1a1a, #2d2d2d); 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #1a1a1a; 
             color: #fff; 
-            min-height: 100vh;
-        }
-        .header { 
-            text-align: center;
-            color: #4CAF50; 
-            margin-bottom: 30px;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 20px;
         }
         .status { 
-            padding: 15px; 
-            margin: 10px 0; 
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
+            padding: 10px; 
+            margin: 5px; 
+            border-radius: 5px; 
         }
         .running { 
-            background: linear-gradient(90deg, #2d5a27, #4CAF50);
-            color: #fff;
-            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+            background: #2d5a27; 
+            color: #90ee90; 
         }
         .stopped { 
-            background: linear-gradient(90deg, #5a2727, #f44336);
-            color: #fff;
-            box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+            background: #5a2727; 
+            color: #ffcccb; 
         }
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .btn {
-            background: linear-gradient(90deg, #4CAF50, #45a049);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s;
-            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
-        }
-        .btn.danger {
-            background: linear-gradient(90deg, #f44336, #d32f2f);
-            box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+        .header { 
+            color: #4CAF50; 
+            margin-bottom: 20px; 
         }
         #messages { 
-            height: 500px; 
+            height: 400px; 
             overflow-y: auto; 
-            border: 2px solid #4CAF50; 
-            border-radius: 10px;
-            padding: 15px; 
-            background: rgba(42, 42, 42, 0.9);
-            font-family: 'Courier New', monospace;
-            backdrop-filter: blur(10px);
+            border: 1px solid #444; 
+            padding: 10px; 
+            background: #2a2a2a;
+            font-family: monospace;
+            border-radius: 5px;
         }
         .message { 
-            margin: 5px 0; 
-            padding: 8px 12px;
-            border-left: 4px solid #4CAF50;
-            background: rgba(76, 175, 80, 0.1);
-            border-radius: 0 8px 8px 0;
-            animation: slideIn 0.3s ease;
+            margin: 2px 0; 
+            padding: 2px 5px;
+            border-left: 3px solid #4CAF50;
         }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
+        .controls {
+            margin: 10px 0;
         }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
         }
-        .stat-card {
-            background: rgba(76, 175, 80, 0.1);
-            border: 1px solid #4CAF50;
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4CAF50;
-        }
-        .timestamp {
-            color: #888;
-            font-size: 12px;
+        .btn:hover {
+            background: #45a049;
         }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🤖 Agent Zero V1 - System Monitor</h1>
-        <p>Real-time Multi-Agent Platform Monitoring</p>
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value" id="clientCount">0</div>
-                <div>Connected Clients</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="messageCount">0</div>
-                <div>Messages Processed</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="uptime">00:00</div>
-                <div>Session Uptime</div>
-            </div>
-        </div>
+        <p>Real-time system monitoring and WebSocket testing</p>
     </div>
     
     <div id="status" class="status stopped">
-        WebSocket: Disconnected ❌
+        WebSocket: Disconnected
     </div>
     
     <div class="controls">
-        <button class="btn" onclick="sendPing()">📡 Send Ping</button>
-        <button class="btn" onclick="sendTestMessage()">🧪 Test Agent Message</button>
-        <button class="btn" onclick="sendSystemStatus()">📊 System Status</button>
-        <button class="btn danger" onclick="clearMessages()">🧹 Clear Messages</button>
+        <button class="btn" onclick="sendPing()">Send Ping</button>
+        <button class="btn" onclick="clearMessages()">Clear Messages</button>
+        <button class="btn" onclick="sendTestMessage()">Test Message</button>
     </div>
     
     <div id="messages"></div>
     
     <script>
         let ws;
-        let messageCount = 0;
-        let startTime = Date.now();
         const status = document.getElementById('status');
         const messages = document.getElementById('messages');
         
@@ -200,14 +132,12 @@ class MinimalWebSocketMonitor:
                 status.textContent = 'WebSocket: Connected ✅';
                 status.className = 'status running';
                 addMessage('🔗 Connected to Agent Zero V1 Monitor', 'success');
-                updateStats();
             };
             
             ws.onclose = () => {
                 status.textContent = 'WebSocket: Disconnected ❌';
                 status.className = 'status stopped';
-                addMessage('❌ Disconnected from server - attempting reconnect...', 'error');
-                updateStats();
+                addMessage('❌ Disconnected from server', 'error');
                 
                 // Attempt to reconnect after 3 seconds
                 setTimeout(connect, 3000);
@@ -218,15 +148,13 @@ class MinimalWebSocketMonitor:
             };
             
             ws.onmessage = (event) => {
-                messageCount++;
                 try {
                     const data = JSON.parse(event.data);
-                    const msg = data.message || JSON.stringify(data.data || data.original || data);
+                    const msg = data.message || JSON.stringify(data.data || data);
                     addMessage(`📨 ${data.type}: ${msg}`, 'info');
                 } catch (e) {
                     addMessage(`📨 ${event.data}`, 'info');
                 }
-                updateStats();
             };
         }
         
@@ -235,24 +163,12 @@ class MinimalWebSocketMonitor:
             div.className = 'message';
             
             let color = '#4CAF50';
-            let icon = '📨';
-            if (type === 'error') { color = '#f44336'; icon = '❌'; }
-            if (type === 'warning') { color = '#ff9800'; icon = '⚠️'; }
-            if (type === 'success') { color = '#4CAF50'; icon = '✅'; }
+            if (type === 'error') color = '#f44336';
+            if (type === 'warning') color = '#ff9800';
             
-            div.innerHTML = `<span class="timestamp">${new Date().toLocaleTimeString()}</span> <span style="color: ${color}">${icon} ${text}</span>`;
+            div.innerHTML = `<span style="color: #888">${new Date().toLocaleTimeString()}</span> <span style="color: ${color}">${text}</span>`;
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
-        }
-        
-        function updateStats() {
-            document.getElementById('clientCount').textContent = ws && ws.readyState === WebSocket.OPEN ? '1' : '0';
-            document.getElementById('messageCount').textContent = messageCount;
-            
-            const uptimeMs = Date.now() - startTime;
-            const minutes = Math.floor(uptimeMs / 60000);
-            const seconds = Math.floor((uptimeMs % 60000) / 1000);
-            document.getElementById('uptime').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
         
         function sendPing() {
@@ -260,55 +176,26 @@ class MinimalWebSocketMonitor:
                 ws.send(JSON.stringify({
                     type: 'ping',
                     timestamp: Date.now(),
-                    message: 'System ping from browser',
-                    source: 'Agent Zero V1 Monitor'
+                    message: 'Ping from browser'
                 }));
-                addMessage('📤 Ping message sent to server', 'info');
+                addMessage('📤 Sent ping message', 'info');
             } else {
-                addMessage('❌ WebSocket not connected - cannot send ping', 'error');
+                addMessage('❌ WebSocket not connected', 'error');
             }
         }
         
         function sendTestMessage() {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
-                    type: 'agent_test',
+                    type: 'test',
                     data: {
                         agent_id: 'test-agent-001',
-                        status: 'testing_communication',
-                        components: ['AgentExecutor', 'WebSocket', 'Neo4j', 'RabbitMQ'],
-                        test_result: 'success',
-                        arch_linux_compatible: true
-                    },
-                    timestamp: Date.now(),
-                    source: 'Agent Zero V1 Test Suite'
-                }));
-                addMessage('📤 Agent test message sent', 'info');
-            } else {
-                addMessage('❌ WebSocket not connected', 'error');
-            }
-        }
-        
-        function sendSystemStatus() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'system_status',
-                    data: {
-                        platform: 'Agent Zero V1',
-                        environment: 'Arch Linux + Virtual Environment',
-                        python_version: 'Python 3.13.7',
-                        services: {
-                            neo4j: 'RUNNING (7474/7687)',
-                            rabbitmq: 'RUNNING (5672)',
-                            redis: 'RUNNING (6379)',
-                            websocket: 'RUNNING (8000)'
-                        },
-                        test_status: '17/17 passed (100%)',
-                        development_ready: true
+                        status: 'testing',
+                        components: ['AgentExecutor', 'WebSocket', 'Neo4j']
                     },
                     timestamp: Date.now()
                 }));
-                addMessage('📤 System status report sent', 'info');
+                addMessage('📤 Sent test message', 'info');
             } else {
                 addMessage('❌ WebSocket not connected', 'error');
             }
@@ -316,24 +203,18 @@ class MinimalWebSocketMonitor:
         
         function clearMessages() {
             messages.innerHTML = '';
-            messageCount = 0;
-            addMessage('🧹 Message history cleared', 'info');
-            updateStats();
+            addMessage('🧹 Messages cleared', 'info');
         }
         
         // Connect on page load
         connect();
         
-        // Update stats every second
-        setInterval(updateStats, 1000);
-        
-        // Send periodic keepalive every 30 seconds
+        // Send periodic keepalive
         setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'keepalive',
-                    timestamp: Date.now(),
-                    session_duration: Date.now() - startTime
+                    timestamp: Date.now()
                 }));
             }
         }, 30000);
@@ -343,28 +224,20 @@ class MinimalWebSocketMonitor:
         return web.Response(text=html, content_type='text/html')
     
     async def websocket_handler(self, request):
-        """Handle WebSocket connections with enhanced features."""
+        """Handle WebSocket connections."""
         ws = web.WebSocketResponse()
         await ws.prepare(request)
         
         self.clients.add(ws)
         logger.info(f"Client connected. Total clients: {len(self.clients)}")
         
-        # Send enhanced welcome message
+        # Send welcome message
         await ws.send_str(json.dumps({
             'type': 'welcome',
-            'message': 'Connected to Agent Zero V1 Multi-Agent Platform Monitor',
+            'message': 'Connected to Agent Zero V1 Monitor',
             'timestamp': datetime.now().isoformat(),
             'clients': len(self.clients),
-            'system': 'Agent Zero V1',
-            'platform': 'Arch Linux + Virtual Environment',
-            'services': {
-                'neo4j': 'Available on 7474/7687',
-                'rabbitmq': 'Available on 5672', 
-                'redis': 'Available on 6379',
-                'websocket': 'Active on 8000'
-            },
-            'capabilities': ['real-time-monitoring', 'agent-communication', 'system-testing']
+            'system': 'Agent Zero V1 Multi-Agent Platform'
         }))
         
         try:
@@ -373,63 +246,34 @@ class MinimalWebSocketMonitor:
                     try:
                         data = json.loads(msg.data)
                         
-                        # Handle different message types with enhanced responses
+                        # Handle different message types
                         if data.get('type') == 'ping':
                             response = {
                                 'type': 'pong',
                                 'original_timestamp': data.get('timestamp'),
                                 'server_timestamp': datetime.now().isoformat(),
-                                'message': 'Pong from Agent Zero V1 Multi-Agent Platform',
-                                'latency_ms': datetime.now().timestamp() * 1000 - data.get('timestamp', 0)
-                            }
-                        elif data.get('type') == 'agent_test':
-                            response = {
-                                'type': 'agent_test_response',
-                                'original': data.get('data', {}),
-                                'server_validation': {
-                                    'agent_executor': 'operational',
-                                    'websocket': 'active',
-                                    'neo4j': 'connected',
-                                    'rabbitmq': 'active',
-                                    'arch_linux_compat': 'confirmed'
-                                },
-                                'timestamp': datetime.now().isoformat(),
-                                'test_result': 'SUCCESS'
-                            }
-                        elif data.get('type') == 'system_status':
-                            response = {
-                                'type': 'system_status_response',
-                                'current_status': data.get('data', {}),
-                                'server_health': {
-                                    'uptime': f"{datetime.now().strftime('%H:%M:%S')}",
-                                    'active_clients': len(self.clients),
-                                    'memory_usage': 'optimal',
-                                    'performance': 'excellent'
-                                },
-                                'timestamp': datetime.now().isoformat()
+                                'message': 'Pong from Agent Zero V1 Monitor'
                             }
                         elif data.get('type') == 'keepalive':
                             response = {
                                 'type': 'keepalive_ack',
                                 'timestamp': datetime.now().isoformat(),
-                                'status': 'alive',
-                                'session_duration_ms': data.get('session_duration', 0)
+                                'status': 'alive'
                             }
                         else:
-                            # Generic echo with platform info
+                            # Echo back received data with server info
                             response = {
                                 'type': 'echo',
                                 'original': data,
                                 'server_timestamp': datetime.now().isoformat(),
                                 'client_count': len(self.clients),
-                                'processed_by': 'Agent Zero V1 WebSocket Monitor',
-                                'platform': 'Multi-Agent Enterprise Platform'
+                                'processed_by': 'Agent Zero V1 WebSocket Monitor'
                             }
                         
                         await ws.send_str(json.dumps(response))
                         
-                        # Enhanced logging
-                        logger.info(f"Processed: {data.get('type', 'unknown')} from client (total clients: {len(self.clients)})")
+                        # Log received message
+                        logger.info(f"Received: {data.get('type', 'unknown')} from client")
                         
                     except json.JSONDecodeError:
                         # Handle plain text messages
@@ -437,7 +281,7 @@ class MinimalWebSocketMonitor:
                             'type': 'text_echo',
                             'message': msg.data,
                             'timestamp': datetime.now().isoformat(),
-                            'note': 'Received as plain text - Agent Zero V1 Monitor'
+                            'note': 'Received as plain text'
                         }))
                         
                 elif msg.type == WSMsgType.ERROR:
@@ -461,8 +305,7 @@ class MinimalWebSocketMonitor:
             **message,
             'broadcast_timestamp': datetime.now().isoformat(),
             'client_count': len(self.clients),
-            'broadcast_id': f"broadcast-{datetime.now().timestamp()}",
-            'platform': 'Agent Zero V1 Multi-Agent Platform'
+            'broadcast_id': f"broadcast-{datetime.now().timestamp()}"
         })
         
         disconnected = set()
@@ -484,13 +327,12 @@ class MinimalWebSocketMonitor:
         logger.info(f"🔌 WebSocket: ws://{self.host}:{self.port}/ws")
         print(f"\n🌐 Open browser: http://{self.host}:{self.port}")
         print("💡 Use Ctrl+C to stop")
-        print("🎯 Features: Real-time monitoring, Agent testing, System diagnostics")
-        print("🤖 Platform: Agent Zero V1 Multi-Agent Enterprise System")
+        print("🎯 Features: Real-time monitoring, WebSocket testing, System status")
         
         try:
             web.run_app(self.app, host=self.host, port=self.port)
         except KeyboardInterrupt:
-            logger.info("🛑 Agent Zero V1 WebSocket Monitor stopped by user")
+            logger.info("🛑 WebSocket Monitor stopped by user")
         except Exception as e:
             logger.error(f"Failed to start WebSocket Monitor: {e}")
             print(f"❌ Error: {e}")
@@ -500,7 +342,6 @@ def main():
     """Main entry point."""
     print("🤖 Agent Zero V1 - WebSocket Monitor")
     print("===================================")
-    print("🎯 Multi-Agent Platform Monitoring System")
     
     monitor = MinimalWebSocketMonitor()
     monitor.run()

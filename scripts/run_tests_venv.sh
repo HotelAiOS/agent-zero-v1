@@ -9,7 +9,7 @@ echo "====================================================="
 # Check if venv exists
 if [ ! -d "venv" ]; then
     echo "❌ Virtual environment not found!"
-    echo "Run: ./scripts/create_venv_and_install.sh first"
+    echo "Run: ./create_venv_and_install.sh first"
     exit 1
 fi
 
@@ -19,6 +19,6 @@ source venv/bin/activate
 
 # Run the system test
 echo "🧪 Running system test..."
-python scripts/agent_zero_system_test_venv.py
+python agent_zero_system_test_venv.py
 
 echo "✅ Tests completed!"

@@ -57,7 +57,7 @@ def test_agent_executor():
     """Test AgentExecutor with proper error handling."""
     try:
         # Add current directory to Python path
-        project_root = Path(__file__).parent.parent
+        project_root = Path(__file__).parent
         sys.path.insert(0, str(project_root))
         
         # Try to import AgentExecutor
@@ -114,7 +114,7 @@ def check_file_structure():
         "shared/execution/agent_executor.py",
         "shared/execution/project_orchestrator.py", 
         "shared/monitoring/websocket_monitor.py",
-        "scripts/websocket_monitor_minimal.py",
+        "websocket_monitor_minimal.py",
     ]
     
     found_files = 0
@@ -192,18 +192,24 @@ def main():
     elif tests_passed >= total_tests * 0.8:
         print("✅ MOST TESTS PASSED - System mostly operational")
         success_rate = 80
-    else:
-        print("❌ SOME TESTS FAILED - System needs attention")
+    elif tests_passed >= total_tests * 0.5:
+        print("⚠️  SOME TESTS FAILED - System partially operational")
         success_rate = 50
+    else:
+        print("❌ MANY TESTS FAILED - System needs attention")
+        success_rate = 0
     
     print("\n🔧 Next Steps:")
     if success_rate == 100:
         print("   → System ready for development!")
-        print("   → Start WebSocket: ./scripts/start_websocket_venv.sh")
+        print("   → Start WebSocket: ./start_websocket_venv.sh")
     elif success_rate >= 80:
         print("   → Start missing services (Neo4j, RabbitMQ, Redis)")
+        print("   → Check file paths and permissions")
     else:
-        print("   → Check file structure and dependencies")
+        print("   → Run: ./create_venv_and_install.sh")
+        print("   → Start required services")
+        print("   → Check project file structure")
     
     return 0 if success_rate >= 80 else 1
 
