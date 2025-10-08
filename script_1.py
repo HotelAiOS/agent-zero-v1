@@ -1,4 +1,5 @@
-services:
+# Generowanie naprawionego docker-compose.yml
+docker_compose_fixed = """services:
   neo4j:
     image: neo4j:5.13
     container_name: agent-zero-neo4j
@@ -65,3 +66,15 @@ networks:
     ipam:
       config:
         - subnet: 172.25.0.0/16
+"""
+
+# Zapisanie do pliku
+with open('docker-compose-fixed.yml', 'w') as f:
+    f.write(docker_compose_fixed)
+    
+print("✅ Created docker-compose-fixed.yml")
+print("📋 Key changes:")
+print("- Removed obsolete version attribute")  
+print("- Fixed Neo4j password: neo4j/agent-pass")
+print("- Added health checks for all services")
+print("- Fixed network name: agent-zero-network")

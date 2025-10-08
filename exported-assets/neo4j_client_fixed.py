@@ -30,7 +30,16 @@ class Neo4jClient:
         max_retries: int = 5,
         retry_delay: float = 2.0
     ):
-        """Initialize Neo4j client with retry logic"""
+        """
+        Initialize Neo4j client with retry logic
+
+        Args:
+            uri: Neo4j connection URI (default: from env)
+            username: Database username (default: from env)
+            password: Database password (default: from env)
+            max_retries: Maximum connection retry attempts
+            retry_delay: Base delay between retries (seconds)
+        """
         self.uri = uri or os.getenv("NEO4J_URI", "bolt://localhost:7687")
         self.username = username or os.getenv("NEO4J_USERNAME", "neo4j")
         self.password = password or os.getenv("NEO4J_PASSWORD", "agent-pass")
@@ -64,7 +73,7 @@ class Neo4jClient:
                 logger.warning(f"Neo4j service unavailable (attempt {attempt}): {e}")
 
                 if attempt < self.max_retries:
-                    delay = self.retry_delay * (2 ** (attempt - 1))
+                    delay = self.retry_delay * (2 ** (attempt - 1))  # Exponential backoff
                     logger.info(f"Retrying in {delay:.1f} seconds...")
                     time.sleep(delay)
                 else:
@@ -108,7 +117,16 @@ class Neo4jClient:
         query: str,
         parameters: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Execute Cypher query with error handling"""
+        """
+        Execute Cypher query with error handling
+
+        Args:
+            query: Cypher query string
+            parameters: Query parameters
+
+        Returns:
+            List of result records as dictionaries
+        """
         if not self.driver:
             raise RuntimeError("Neo4j driver not initialized")
 
@@ -120,6 +138,7 @@ class Neo4jClient:
         except ServiceUnavailable:
             logger.error("Neo4j service unavailable, attempting reconnection...")
             self._connect_with_retry()
+            # Retry query after reconnection
             with self.driver.session() as session:
                 result = session.run(query, parameters or {})
                 return [record.data() for record in result]
@@ -129,6 +148,67 @@ class Neo4jClient:
             logger.error(f"Query: {query}")
             logger.error(f"Parameters: {parameters}")
             raise
+
+    def store_agent_knowledge(
+        self,
+        agent_id: str,
+        knowledge_type: str,
+        content: Dict[str, Any]
+    ) -> bool:
+        """Store agent knowledge in graph"""
+        query = """
+        MERGE (a:Agent {id: $agent_id})
+        CREATE (k:Knowledge {
+            type: $knowledge_type,
+            content: $content,
+            timestamp: timestamp()
+        })
+        CREATE (a)-[:KNOWS]->(k)
+        RETURN k.timestamp as created_at
+        """
+
+        try:
+            result = self.execute_query(
+                query,
+                {
+                    "agent_id": agent_id,
+                    "knowledge_type": knowledge_type,
+                    "content": str(content)
+                }
+            )
+            logger.info(f"✅ Stored knowledge for agent {agent_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to store knowledge: {e}")
+            return False
+
+    def get_agent_knowledge(
+        self,
+        agent_id: str,
+        knowledge_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Retrieve agent knowledge from graph"""
+        if knowledge_type:
+            query = """
+            MATCH (a:Agent {id: $agent_id})-[:KNOWS]->(k:Knowledge {type: $knowledge_type})
+            RETURN k.content as content, k.timestamp as timestamp
+            ORDER BY k.timestamp DESC
+            """
+            parameters = {"agent_id": agent_id, "knowledge_type": knowledge_type}
+        else:
+            query = """
+            MATCH (a:Agent {id: $agent_id})-[:KNOWS]->(k:Knowledge)
+            RETURN k.type as type, k.content as content, k.timestamp as timestamp
+            ORDER BY k.timestamp DESC
+            """
+            parameters = {"agent_id": agent_id}
+
+        try:
+            return self.execute_query(query, parameters)
+        except Exception as e:
+            logger.error(f"Failed to retrieve knowledge: {e}")
+            return []
 
     def close(self) -> None:
         """Close database connection"""
@@ -149,3 +229,19 @@ def get_neo4j_client() -> Neo4jClient:
         _neo4j_client = Neo4jClient()
 
     return _neo4j_client
+
+
+if __name__ == "__main__":
+    # Test connection
+    logging.basicConfig(level=logging.INFO)
+
+    print("Testing Neo4j connection...")
+    client = get_neo4j_client()
+
+    health = client.health_check()
+    print(f"\nHealth check: {health}")
+
+    if health["connected"]:
+        print("✅ Neo4j client working correctly!")
+    else:
+        print("❌ Neo4j client has issues")
