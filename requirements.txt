@@ -1,6 +1,6 @@
 fastapi
-uvicorn
 neo4j
 pika
-httpx
 ollama
+uvicorn[standard]
+pytest
