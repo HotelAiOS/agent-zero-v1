@@ -1,0 +1,30 @@
+#!/usr/bin/env fish
+
+echo "=== Agent Zero V1: Naprawa struktury katalogów ==="
+set ROOT (pwd)
+set SUBDIR "$ROOT/agent-zero-v1"
+
+if not test -d $SUBDIR
+    echo "Nie znaleziono katalogu $SUBDIR. Nic nie trzeba robić."
+    exit 0
+end
+
+echo "Tworzę backup katalogu $SUBDIR -> $SUBDIR.backup"
+cp -r $SUBDIR $SUBDIR.backup
+
+echo
+echo "W katalogu $ROOT istnieje podkatalog agent-zero-v1/"
+echo "Zawartość (10 pierwszych plików/katalogów):"
+ls -l $SUBDIR | head -n 10
+echo
+echo "Czy chcesz trwale usunąć podkatalog 'agent-zero-v1'? (tak/nie)"
+read -l confirm
+
+if test "$confirm" = "tak"
+    rm -rf $SUBDIR
+    echo "[✅] Usunięto katalog $SUBDIR"
+else
+    echo "Przerwano operację. Nic nie zostało usunięte."
+end
+
+echo "Gotowe! Sprawdź strukturę poleceniem: tree -L 2"
