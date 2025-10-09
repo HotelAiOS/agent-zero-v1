@@ -14,6 +14,10 @@ from typing import Optional
 from pathlib import Path
 import sqlite3
 
+# Import existing modules (assuming they exist)
+# from services.ai_router.src.router.orchestrator import AIOrchestrator
+# from shared.utils.simple_tracker import SimpleTracker
+
 app = typer.Typer()
 console = Console()
 
@@ -82,6 +86,7 @@ def ask_for_quick_feedback(task_id: str, model_used: str) -> None:
     try:
         rating = input("Rating: ").strip()
         if rating and rating.isdigit() and 1 <= int(rating) <= 5:
+            # Ask for optional comment if rating is low
             comment = None
             if int(rating) <= 2:
                 comment = input("What went wrong? (optional): ").strip() or None
@@ -89,6 +94,7 @@ def ask_for_quick_feedback(task_id: str, model_used: str) -> None:
             tracker.record_feedback(task_id, int(rating), comment)
             console.print("✅ Thanks! This helps us improve.", style="green")
             
+            # Show immediate learning insight
             if int(rating) <= 2:
                 console.print(f"⚠️  Low rating noted for {model_used}. We'll learn from this!", style="yellow")
         else:
@@ -96,7 +102,7 @@ def ask_for_quick_feedback(task_id: str, model_used: str) -> None:
     except KeyboardInterrupt:
         console.print("\n⏭️  Feedback skipped", style="dim")
     except Exception:
-        pass
+        pass  # Skip silently on any error
 
 @app.command()
 def ask(question: str, provider: Optional[str] = None):
@@ -107,18 +113,26 @@ def ask(question: str, provider: Optional[str] = None):
     
     console.print(f"🤖 Processing question: {question}")
     
-    model_used = provider or "llama3.2-3b"
-    model_recommended = "llama3.2-3b"
+    # TODO: Replace with actual AI orchestrator call
+    # orchestrator = AIOrchestrator()
+    # response = orchestrator.process_question(question, provider)
     
+    # MOCK IMPLEMENTATION - replace with actual logic
+    model_used = provider or "llama3.2-3b"  # Default model
+    model_recommended = "llama3.2-3b"  # Would come from intelligent selector
+    
+    # Simulate processing
     import time
-    time.sleep(1)
+    time.sleep(1)  # Simulate processing time
     
     response = f"Mock response to: {question} (using {model_used})"
     
+    # Calculate metrics
     end_time = datetime.now()
     latency_ms = int((end_time - start_time).total_seconds() * 1000)
-    cost_usd = 0.001 
+    cost_usd = 0.001  # Mock cost - would be calculated from actual API usage
     
+    # Track the task
     tracker.track_task(
         task_id=task_id,
         task_type="chat",
@@ -128,8 +142,10 @@ def ask(question: str, provider: Optional[str] = None):
         latency=latency_ms
     )
     
+    # Display response
     console.print(Panel(response, title="Agent Zero Response", border_style="green"))
     
+    # CRITICAL: Ask for feedback after every task
     ask_for_quick_feedback(task_id, model_used)
 
 @app.command()
@@ -141,11 +157,13 @@ def code(description: str, provider: Optional[str] = None):
     
     console.print(f"💻 Generating code: {description}")
     
-    model_used = provider or "qwen2.5-coder:7b"
+    # TODO: Replace with actual code generation logic
+    model_used = provider or "qwen2.5-coder:7b"  # Default for code
     model_recommended = "qwen2.5-coder:7b"
     
+    # Mock code generation
     import time
-    time.sleep(2)
+    time.sleep(2)  # Simulate processing
     
     code_output = f'''# Generated code for: {description}
 def example_function():
@@ -156,10 +174,12 @@ def example_function():
 print(example_function())
 '''
     
+    # Calculate metrics
     end_time = datetime.now()
     latency_ms = int((end_time - start_time).total_seconds() * 1000)
-    cost_usd = 0.005
+    cost_usd = 0.005  # Code generation is more expensive
     
+    # Track the task
     tracker.track_task(
         task_id=task_id,
         task_type="code_generation",
@@ -169,8 +189,10 @@ print(example_function())
         latency=latency_ms
     )
     
+    # Display code
     console.print(Panel(code_output, title="Generated Code", border_style="cyan"))
     
+    # CRITICAL: Ask for feedback
     ask_for_quick_feedback(task_id, model_used)
 
 @app.command()
@@ -182,18 +204,22 @@ def pipeline(description: str, provider: Optional[str] = None):
     
     console.print(f"🔧 Executing pipeline: {description}")
     
+    # TODO: Replace with actual pipeline logic
     model_used = provider or "llama3.2-3b"
     model_recommended = "llama3.2-3b"
     
+    # Mock pipeline execution
     import time
-    time.sleep(3)
+    time.sleep(3)  # Simulate complex processing
     
     pipeline_output = f"Pipeline '{description}' executed successfully using {model_used}"
     
+    # Calculate metrics
     end_time = datetime.now()
     latency_ms = int((end_time - start_time).total_seconds() * 1000)
-    cost_usd = 0.010
+    cost_usd = 0.010  # Pipeline operations can be expensive
     
+    # Track the task
     tracker.track_task(
         task_id=task_id,
         task_type="pipeline",
@@ -203,8 +229,10 @@ def pipeline(description: str, provider: Optional[str] = None):
         latency=latency_ms
     )
     
+    # Display result
     console.print(Panel(pipeline_output, title="Pipeline Result", border_style="magenta"))
     
+    # CRITICAL: Ask for feedback
     ask_for_quick_feedback(task_id, model_used)
 
 @app.command()
@@ -216,6 +244,7 @@ def compare_models():
     
     console.print("📊 Model Performance Analysis (Last 7 days)")
     
+    # Query performance data
     cursor = tracker.conn.execute('''
         SELECT 
             t.model_used,
@@ -237,6 +266,7 @@ def compare_models():
         console.print("❌ No data available. Start using the system to see insights!", style="yellow")
         return
     
+    # Create performance table
     table = Table(title="Model Performance (Last 7 days)")
     table.add_column("Model", style="cyan")
     table.add_column("Usage", style="white")
@@ -252,6 +282,7 @@ def compare_models():
     for row in results:
         model, usage, avg_cost, avg_rating, feedback_count, overrides = row
         
+        # Calculate performance score (higher rating, lower cost = better)
         score = (avg_rating or 0) * 10 - (avg_cost or 0) * 100
         if score > best_score:
             best_score = score
@@ -271,9 +302,11 @@ def compare_models():
     
     console.print(table)
     
+    # Actionable insights
     if best_model:
         console.print(f"\n🎯 **Recommendation**: Use `{best_model}` for best quality/cost ratio", style="bold green")
     
+    # Show top issues
     cursor = tracker.conn.execute('''
         SELECT model_used, AVG(rating) as avg_rating 
         FROM tasks t JOIN feedback f ON t.id = f.task_id 
@@ -293,6 +326,7 @@ def kaizen_status():
     
     console.print("🧠 Kaizen Learning Status")
     
+    # Basic stats
     cursor = tracker.conn.execute('''
         SELECT 
             COUNT(DISTINCT t.id) as total_tasks,
@@ -315,6 +349,7 @@ def kaizen_status():
     console.print(f"   • Average rating: {avg_rating:.1f}/5" if avg_rating else "   • Average rating: No feedback yet")
     console.print(f"   • Total cost: ${total_cost:.4f}" if total_cost else "   • Total cost: $0.0000")
     
+    # Learning insights
     if feedback_count > 5:
         console.print("\n🎓 **Learning Insights:**")
         console.print("   • System is collecting feedback ✅")
