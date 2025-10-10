@@ -1,497 +1,184 @@
-"""Agent Zero V1 - Business Requirements Parser (Main Orchestrator)
-
-🚀 BusinessRequirementsParser - V2.0 Intelligence Layer Core
-========================================================
-
-Developer A Implementation - Week 42 (9-10 października 2025)
-Main orchestrator integrating all business intelligence components
-
-Pipeline:
-1. Intent Extraction (Natural Language → Structured Intent)
-2. Context Enrichment (Domain Knowledge Integration)
-3. Constraint Analysis (Business Logic Validation)
-4. Technical Translation (Business → Technical Specifications)
-
-Integration: Multi-agent project orchestration for Agent Zero V1
-"""
-
-import asyncio
-import time
-import json
+from __future__ import annotations
+import re, asyncio, time, json, logging
 from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field, asdict
-from enum import Enum
-import logging
-from pathlib import Path
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
 
-# Business Intelligence Components
-try:
-    from .intent_extractor import IntentExtractor, ExtractedIntent
-    from .context_enricher import ContextEnricher, EnrichedContext, ValidationIssue
-    from .constraint_analyzer import ConstraintAnalyzer, ConstraintAnalysis
-    from .business_translator import BusinessToTechnicalTranslator, TechnicalSpecification
-except ImportError as e:
-    logging.error(f"Business intelligence components not available: {e}")
-    # Import fallbacks or create mock classes
+router = APIRouter(prefix="/api/business", tags=["business"])
+parser: BusinessRequirementsParser  # ustawione niżej
 
+class BusinessRequest(BaseModel):
+    request: str = Field(..., min_length=1)
+    priority: Optional[str] = Field("medium")
+    context: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
-class ProcessingStatus(Enum):
-    """Business requirements processing status"""
-    PENDING = "pending"
-    EXTRACTING_INTENT = "extracting_intent"
-    ENRICHING_CONTEXT = "enriching_context"
-    ANALYZING_CONSTRAINTS = "analyzing_constraints"
-    GENERATING_TECHNICAL_SPEC = "generating_technical_spec"
-    COMPLETED = "completed"
-    FAILED = "failed"
+class TechnicalSpec(BaseModel):
+    intent: str
+    entities: List[str]
+    complexity: str
+    agents_needed: List[str]
+    estimated_cost: float
+    estimated_time_minutes: int
+    confidence_score: float
+    technical_requirements: Dict[str, Any]
+    validation_issues: List[Dict[str, Any]] = []
 
-
-class QualityLevel(Enum):
-    """Requirements processing quality assessment"""
-    EXCELLENT = "excellent"    # >90% confidence, complete analysis
-    GOOD = "good"             # >75% confidence, most features covered
-    ACCEPTABLE = "acceptable"  # >60% confidence, basic analysis
-    POOR = "poor"             # <60% confidence, incomplete analysis
-
-
-@dataclass
-class ProcessingMetrics:
-    """Processing performance and quality metrics"""
-    
-    # Performance metrics
-    total_processing_time: float = 0.0
-    intent_extraction_time: float = 0.0
-    context_enrichment_time: float = 0.0
-    constraint_analysis_time: float = 0.0
-    technical_translation_time: float = 0.0
-    
-    # Quality metrics
-    overall_confidence: float = 0.0
-    intent_confidence: float = 0.0
-    enrichment_confidence: float = 0.0
-    constraint_confidence: float = 0.0
-    translation_confidence: float = 0.0
-    
-    # Coverage metrics
-    requirements_identified: int = 0
-    missing_requirements_found: int = 0
-    validation_issues_count: int = 0
-    technical_specs_generated: int = 0
-    
-    # Quality assessment
-    quality_level: QualityLevel = QualityLevel.ACCEPTABLE
-    completeness_score: float = 0.0
-
-
-@dataclass
-class BusinessRequirementsResult:
-    """Complete business requirements processing result"""
-    
-    # Input
-    original_input: str = ""
-    processing_timestamp: str = ""
-    
-    # Processing stages
-    extracted_intent: Optional[ExtractedIntent] = None
-    enriched_context: Optional[EnrichedContext] = None
-    constraint_analysis: Optional[ConstraintAnalysis] = None
-    technical_specification: Optional[TechnicalSpecification] = None
-    
-    # Validation and issues
-    validation_issues: List[ValidationIssue] = field(default_factory=list)
-    processing_errors: List[str] = field(default_factory=list)
-    
-    # Metadata
-    processing_status: ProcessingStatus = ProcessingStatus.PENDING
-    metrics: ProcessingMetrics = field(default_factory=ProcessingMetrics)
-    
-    # Success indicators
-    success_probability: float = 0.0
-    risk_assessment: List[str] = field(default_factory=list)
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert result to dictionary for serialization"""
-        return asdict(self)
-    
-    def to_json(self) -> str:
-        """Convert result to JSON string"""
-        return json.dumps(self.to_dict(), indent=2, default=str)
-
+class ValidationResponse(BaseModel):
+    is_valid: bool
+    confidence: float
+    errors: List[str] = []
+    suggestions: List[str] = []
 
 class BusinessRequirementsParser:
-    """Business Requirements Parser - V2.0 Intelligence Layer
-    
-    Main orchestrator for processing natural language business requirements
-    into structured technical specifications for multi-agent systems.
-    
-    Pipeline:
-    --------
-    Natural Language Input
-           ↓
-    1. Intent Extraction (Goals, Stakeholders, Classification)
-           ↓  
-    2. Context Enrichment (Domain Knowledge, Best Practices)
-           ↓
-    3. Constraint Analysis (Validation, Risk Assessment)
-           ↓
-    4. Technical Translation (Architecture, Implementation Plan)
-           ↓
-    Technical Specification Output
-    """
-    
-    def __init__(self, 
-                 config: Optional[Dict[str, Any]] = None,
-                 knowledge_base_path: Optional[str] = None):
-        
+    def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.config = config or self._default_config()
-        
-        # Initialize components
-        self.intent_extractor = IntentExtractor()
-        self.context_enricher = ContextEnricher(knowledge_base_path)
-        self.constraint_analyzer = ConstraintAnalyzer()
-        self.translator = BusinessToTechnicalTranslator()
-        
-        # Processing state
-        self.current_status = ProcessingStatus.PENDING
-        self.processing_history: List[BusinessRequirementsResult] = []
-        
-        self.logger.info("BusinessRequirementsParser initialized for V2.0 Intelligence Layer")
-    
-    def _default_config(self) -> Dict[str, Any]:
-        """Default configuration for the parser"""
+
+    def parse_intent(self, text: str) -> str:
+        t = text.lower()
+        if any(k in t for k in ["create","build","develop","make","implement"]):
+            return "CREATE"
+        if any(k in t for k in ["update","modify","change","enhance","improve"]):
+            return "UPDATE"
+        return "UNKNOWN"
+
+    def extract_entities(self, text: str) -> List[str]:
+        tl = text.lower()
+        ents: List[str] = []
+        keywords = ["api","database","user","payment",
+                    "inventory","analytics","mobile","dashboard"]
+        for ent in keywords:
+            if re.search(rf"\b{ent}\b", tl):
+                ents.append(ent)
+        if re.search(r"\breport(ing|s)?\b", tl):
+            ents.append("report")
+        if "authentication" in tl or "auth" in tl:
+            ents.append("auth")
+        return list(dict.fromkeys(ents))
+
+    def assess_complexity(self, text: str, entities: List[str]) -> str:
+        tl = text.lower()
+        if "enterprise" in tl or len(entities) >= 5:
+            return "Enterprise"
+        if "complex" in tl or "scalable" in tl or len(entities) >= 4:
+            return "Complex"
+        if "simple" in tl or len(entities) <= 2:
+            return "Simple"
+        return "Moderate"
+
+    def select_agents(self, intent: str, entities: List[str], complexity: str) -> List[str]:
+        agents = ["orchestrator","code_generator"]
+        if "api" in entities:
+            agents.append("api_specialist")
+        if complexity in ["Complex","Enterprise"] or "database" in entities:
+            agents.append("database_specialist")
+        agents.append("solution_architect")
+        return agents
+
+    def estimate_cost_and_time(
+        self,
+        complexity: str,
+        agents: List[str],
+        entities: List[str]
+    ) -> Tuple[float,int]:
+        if complexity == "Simple":
+            return (0.05, 10)
+        if complexity == "Moderate":
+            return (0.10, 30)
+        if complexity == "Complex":
+            return (0.20, 60)
+        # Enterprise
+        return (0.50, 180)
+
+    def generate_technical_spec(
+        self,
+        intent: str,
+        entities: List[str],
+        complexity: str,
+        business_request: str
+    ) -> dict:
+        tech_reqs: Dict[str,Any] = {}
+        if "api" in entities:
+            tech_reqs["api"] = {
+                "type":"REST",
+                "authentication":"JWT",
+                "documentation":"OpenAPI/Swagger"
+            }
+        # always include database for Complex/Enterprise
+        if complexity in ["Complex","Enterprise"] or "database" in entities:
+            tech_reqs["database"] = {"type":"PostgreSQL"}
+        tech_reqs["security"] = {"encryption":"TLS"}
+        cost, time_min = self.estimate_cost_and_time(complexity, [], entities)
         return {
-            "max_processing_time": 30.0,  # seconds
-            "enable_parallel_processing": True,
-            "quality_threshold": 0.6,
-            "include_advanced_analysis": True,
-            "save_processing_history": True,
-            "enable_caching": True
+            "intent": intent,
+            "entities": entities,
+            "complexity": complexity,
+            "agents_needed": self.select_agents(intent, entities, complexity),
+            "estimated_cost": cost,
+            "estimated_time_minutes": time_min,
+            "confidence_score": 0.8,
+            "technical_requirements": tech_reqs,
+            "validation_issues": []
         }
-    
-    async def process_requirements(self, natural_language_input: str) -> BusinessRequirementsResult:
-        """Process natural language business requirements
-        
-        Main entry point for the business requirements intelligence pipeline.
-        
-        Args:
-            natural_language_input: Raw business requirements in natural language
-            
-        Returns:
-            BusinessRequirementsResult with complete analysis and technical specs
-        """
-        start_time = time.time()
-        
-        # Initialize result container
-        result = BusinessRequirementsResult(
-            original_input=natural_language_input,
-            processing_timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
-            processing_status=ProcessingStatus.PENDING
-        )
-        
-        self.logger.info(f"Starting business requirements processing: {len(natural_language_input)} chars")
-        
-        try:
-            # Stage 1: Intent Extraction
-            result.processing_status = ProcessingStatus.EXTRACTING_INTENT
-            result.extracted_intent = await self._extract_intent(
-                natural_language_input, result.metrics
-            )
-            
-            # Stage 2: Context Enrichment
-            result.processing_status = ProcessingStatus.ENRICHING_CONTEXT
-            if result.extracted_intent:
-                result.enriched_context = await self._enrich_context(
-                    result.extracted_intent, result.metrics
-                )
-            
-            # Stage 3: Constraint Analysis
-            result.processing_status = ProcessingStatus.ANALYZING_CONSTRAINTS
-            if result.enriched_context:
-                result.constraint_analysis = await self._analyze_constraints(
-                    result.enriched_context, result.metrics
-                )
-            
-            # Stage 4: Technical Translation
-            result.processing_status = ProcessingStatus.GENERATING_TECHNICAL_SPEC
-            if result.constraint_analysis:
-                result.technical_specification = await self._generate_technical_spec(
-                    result.enriched_context, result.constraint_analysis, result.metrics
-                )
-            
-            # Compile validation issues
-            result.validation_issues = self._compile_validation_issues(result)
-            
-            # Calculate final metrics and quality assessment
-            result.metrics.total_processing_time = time.time() - start_time
-            self._calculate_final_metrics(result)
-            
-            result.processing_status = ProcessingStatus.COMPLETED
-            
-            self.logger.info(
-                f"Requirements processing completed in {result.metrics.total_processing_time:.2f}s "
-                f"with {result.metrics.quality_level.value} quality"
-            )
-            
-        except Exception as e:
-            result.processing_status = ProcessingStatus.FAILED
-            result.processing_errors.append(str(e))
-            self.logger.error(f"Requirements processing failed: {e}")
-        
-        # Save to history if enabled
-        if self.config.get("save_processing_history", True):
-            self.processing_history.append(result)
-        
-        return result
-    
-    async def _extract_intent(self, input_text: str, metrics: ProcessingMetrics) -> Optional[ExtractedIntent]:
-        """Extract business intent from natural language"""
-        intent_start = time.time()
-        
-        try:
-            intent = await self.intent_extractor.extract_complete_intent(input_text)
-            
-            metrics.intent_extraction_time = time.time() - intent_start
-            metrics.intent_confidence = intent.extraction_confidence
-            metrics.requirements_identified = len(intent.primary_goals) + len(intent.secondary_goals)
-            
-            self.logger.debug(f"Intent extracted with {intent.extraction_confidence:.2f} confidence")
-            return intent
-            
-        except Exception as e:
-            self.logger.error(f"Intent extraction failed: {e}")
-            return None
-    
-    async def _enrich_context(self, intent: ExtractedIntent, metrics: ProcessingMetrics) -> Optional[EnrichedContext]:
-        """Enrich business context with domain knowledge"""
-        enrichment_start = time.time()
-        
-        try:
-            enriched = await self.context_enricher.enrich_with_domain_knowledge(intent)
-            
-            metrics.context_enrichment_time = time.time() - enrichment_start
-            metrics.enrichment_confidence = enriched.enrichment_confidence
-            metrics.missing_requirements_found = len(enriched.missing_requirements)
-            
-            self.logger.debug(f"Context enriched with {enriched.enrichment_confidence:.2f} confidence")
-            return enriched
-            
-        except Exception as e:
-            self.logger.error(f"Context enrichment failed: {e}")
-            return None
-    
-    async def _analyze_constraints(self, context: EnrichedContext, metrics: ProcessingMetrics) -> Optional[ConstraintAnalysis]:
-        """Analyze business constraints and validate logic"""
-        constraint_start = time.time()
-        
-        try:
-            analysis = await self.constraint_analyzer.analyze(context)
-            
-            metrics.constraint_analysis_time = time.time() - constraint_start
-            metrics.constraint_confidence = analysis.analysis_confidence
-            
-            self.logger.debug(f"Constraints analyzed with {analysis.analysis_confidence:.2f} confidence")
-            return analysis
-            
-        except Exception as e:
-            self.logger.error(f"Constraint analysis failed: {e}")
-            return None
-    
-    async def _generate_technical_spec(self, 
-                                     context: EnrichedContext, 
-                                     constraints: ConstraintAnalysis,
-                                     metrics: ProcessingMetrics) -> Optional[TechnicalSpecification]:
-        """Generate technical specification from business requirements"""
-        translation_start = time.time()
-        
-        try:
-            spec = await self.translator.translate(context, constraints)
-            
-            metrics.technical_translation_time = time.time() - translation_start
-            metrics.translation_confidence = spec.generation_confidence
-            metrics.technical_specs_generated = len(spec.architecture_components)
-            
-            self.logger.debug(f"Technical spec generated with {spec.generation_confidence:.2f} confidence")
-            return spec
-            
-        except Exception as e:
-            self.logger.error(f"Technical specification generation failed: {e}")
-            return None
-    
-    def _compile_validation_issues(self, result: BusinessRequirementsResult) -> List[ValidationIssue]:
-        """Compile all validation issues from processing stages"""
-        issues = []
-        
-        # Add issues from context enrichment
-        if result.enriched_context:
-            issues.extend(result.enriched_context.validation_issues)
-        
-        # Add issues from constraint analysis
-        if result.constraint_analysis:
-            issues.extend(result.constraint_analysis.validation_issues)
-        
-        return issues
-    
-    def _calculate_final_metrics(self, result: BusinessRequirementsResult) -> None:
-        """Calculate final quality metrics and assessment"""
-        metrics = result.metrics
-        
-        # Calculate overall confidence (weighted average)
-        confidence_weights = {
-            'intent': 0.3,
-            'enrichment': 0.25,
-            'constraint': 0.25,
-            'translation': 0.2
-        }
-        
-        total_confidence = (
-            metrics.intent_confidence * confidence_weights['intent'] +
-            metrics.enrichment_confidence * confidence_weights['enrichment'] +
-            metrics.constraint_confidence * confidence_weights['constraint'] +
-            metrics.translation_confidence * confidence_weights['translation']
-        )
-        
-        metrics.overall_confidence = total_confidence
-        
-        # Count validation issues by severity
-        error_count = sum(1 for issue in result.validation_issues if issue.severity.value == 'error')
-        warning_count = sum(1 for issue in result.validation_issues if issue.severity.value == 'warning')
-        metrics.validation_issues_count = len(result.validation_issues)
-        
-        # Calculate completeness score
-        completeness_factors = []
-        
-        if result.extracted_intent:
-            completeness_factors.append(0.8 if result.extracted_intent.primary_goals else 0.2)
-        
-        if result.enriched_context:
-            completeness_factors.append(0.8 if result.enriched_context.missing_requirements else 0.6)
-        
-        if result.technical_specification:
-            completeness_factors.append(0.9 if result.technical_specification.architecture_components else 0.3)
-        
-        metrics.completeness_score = sum(completeness_factors) / len(completeness_factors) if completeness_factors else 0.0
-        
-        # Determine quality level
-        if total_confidence >= 0.9 and error_count == 0:
-            metrics.quality_level = QualityLevel.EXCELLENT
-        elif total_confidence >= 0.75 and error_count <= 1:
-            metrics.quality_level = QualityLevel.GOOD
-        elif total_confidence >= 0.6 and error_count <= 2:
-            metrics.quality_level = QualityLevel.ACCEPTABLE
-        else:
-            metrics.quality_level = QualityLevel.POOR
-        
-        # Calculate success probability
-        success_factors = [
-            total_confidence,
-            metrics.completeness_score,
-            max(0, 1.0 - (error_count * 0.2)),  # Penalize errors
-            max(0, 1.0 - (warning_count * 0.1))  # Penalize warnings
-        ]
-        
-        result.success_probability = sum(success_factors) / len(success_factors)
-        
-        # Generate risk assessment
-        result.risk_assessment = self._generate_risk_assessment(result)
-    
-    def _generate_risk_assessment(self, result: BusinessRequirementsResult) -> List[str]:
-        """Generate risk assessment based on processing results"""
-        risks = []
-        
-        if result.metrics.overall_confidence < 0.7:
-            risks.append("Low confidence in requirements analysis - may need clarification")
-        
-        if result.metrics.validation_issues_count > 3:
-            risks.append(f"High number of validation issues ({result.metrics.validation_issues_count})")
-        
-        if result.extracted_intent and result.extracted_intent.urgency.value == 'critical':
-            if len(result.extracted_intent.primary_goals) > 3:
-                risks.append("Critical timeline with extensive scope - high delivery risk")
-        
-        if result.metrics.total_processing_time > self.config.get("max_processing_time", 30):
-            risks.append("Processing time exceeded threshold - complexity risk")
-        
-        return risks
-    
-    async def get_processing_summary(self, result: BusinessRequirementsResult) -> Dict[str, Any]:
-        """Generate human-readable processing summary"""
+
+    def validate_request(self, request: str) -> dict:
+        errors: List[str] = []
+        suggestions: List[str] = []
+        conf = 0.8
+        if len(request.strip()) < 10:
+            errors.append("Request too short")
+            conf = 0.2
+        if re.search(r"password|auth", request, re.IGNORECASE):
+            suggestions.append("Include security considerations")
         return {
-            "status": result.processing_status.value,
-            "quality": result.metrics.quality_level.value,
-            "confidence": f"{result.metrics.overall_confidence:.1%}",
-            "success_probability": f"{result.success_probability:.1%}",
-            "processing_time": f"{result.metrics.total_processing_time:.2f}s",
-            "requirements_found": result.metrics.requirements_identified,
-            "missing_requirements": result.metrics.missing_requirements_found,
-            "validation_issues": result.metrics.validation_issues_count,
-            "technical_components": result.metrics.technical_specs_generated,
-            "main_risks": result.risk_assessment[:3],  # Top 3 risks
-            "project_type": result.extracted_intent.project_type.value if result.extracted_intent else "unknown",
-            "urgency": result.extracted_intent.urgency.value if result.extracted_intent else "unknown"
+            "is_valid": not errors,
+            "errors": errors,
+            "suggestions": suggestions,
+            "confidence": conf
         }
 
+    def sanitize_input(self, text: str) -> str:
+        out = re.sub(r"<script.*?>.*?</script>", "", text,
+                     flags=re.IGNORECASE|re.DOTALL)
+        out = re.sub(r"alert\([^)]*\)", "", out, flags=re.IGNORECASE)
+        out = re.sub(r"<.*?>", "", out)
+        out = out.replace('"', "")
+        return out.strip()
 
-# Development and testing utilities
-async def test_business_requirements_parser():
-    """Test the complete business requirements parser"""
-    parser = BusinessRequirementsParser()
-    
-    # Test with comprehensive e-commerce requirements
-    test_requirements = """
-    We need to build a modern e-commerce platform for our electronics startup.
-    
-    The CEO and CTO want customers to browse our product catalog, add items to their shopping cart, 
-    and complete secure payments using credit cards or PayPal. Users should be able to create accounts,
-    track their orders, and leave product reviews.
-    
-    This is urgent - we need to launch before Black Friday to capture holiday sales.
-    The platform should be mobile-responsive and integrate with our existing inventory system.
-    
-    Success will be measured by conversion rate, average order value, and customer retention.
-    We prefer using React for frontend and Python for backend, with PostgreSQL database.
-    """
-    
-    print("\n🚀 Testing Business Requirements Parser - V2.0 Intelligence Layer")
-    print("=" * 70)
-    
-    # Process requirements
-    result = await parser.process_requirements(test_requirements)
-    
-    # Generate summary
-    summary = await parser.get_processing_summary(result)
-    
-    print("📊 Processing Summary:")
-    for key, value in summary.items():
-        print(f"  {key}: {value}")
-    
-    print("\n🎯 Extracted Intent:")
-    if result.extracted_intent:
-        print(f"  Primary Goals: {result.extracted_intent.primary_goals}")
-        print(f"  Project Type: {result.extracted_intent.project_type.value}")
-        print(f"  Urgency: {result.extracted_intent.urgency.value}")
-        print(f"  Tech Preferences: {result.extracted_intent.technology_preferences}")
-    
-    print("\n🔧 Context Enrichment:")
-    if result.enriched_context:
-        print(f"  Missing Requirements: {len(result.enriched_context.missing_requirements)}")
-        print(f"  Suggested Features: {len(result.enriched_context.suggested_features)}")
-        print(f"  Best Practices: {len(result.enriched_context.best_practices)}")
-    
-    print("\n⚠️  Validation Issues:")
-    for issue in result.validation_issues[:3]:  # Show top 3
-        print(f"  - {issue.severity.value.upper()}: {issue.message}")
-    
-    print("\n🏗️  Technical Specification:")
-    if result.technical_specification:
-        print(f"  Architecture Components: {len(result.technical_specification.architecture_components)}")
-        print(f"  Implementation Tasks: {len(result.technical_specification.implementation_tasks)}")
-        print(f"  Estimated Effort: {result.technical_specification.estimated_effort}")
-    
-    print(f"\n✅ Processing completed in {result.metrics.total_processing_time:.2f}s")
-    print(f"Quality Level: {result.metrics.quality_level.value.upper()}")
-    print(f"Success Probability: {result.success_probability:.1%}")
+parser = BusinessRequirementsParser()
 
+@router.post("/parse", response_model=TechnicalSpec)
+def parse_endpoint(req: BusinessRequest):
+    v = parser.validate_request(req.request)
+    if not v["is_valid"]:
+        raise HTTPException(
+            status_code=400,
+            detail={"message":"Invalid business request","errors":v["errors"]}
+        )
+    intent = parser.parse_intent(req.request)
+    ents = parser.extract_entities(req.request)
+    comp = parser.assess_complexity(req.request, ents)
+    if req.priority == "critical" or req.context.get("budget") == "enterprise":
+        comp = "Enterprise"
+    return parser.generate_technical_spec(intent, ents, comp, req.request)
 
-if __name__ == "__main__":
-    asyncio.run(test_business_requirements_parser())
+@router.post("/validate", response_model=ValidationResponse)
+def validate_endpoint(req: BusinessRequest):
+    return ValidationResponse(**parser.validate_request(req.request))
+
+@router.get("/health")
+def health_check():
+    return {
+        "status":"healthy",
+        "service":"business_requirements_parser",
+        "version":"1.0.0",
+        "components":{"parser":True}
+    }
+
+@router.get("/capabilities")
+def get_capabilities():
+    return {
+        "supported_intents":["CREATE","UPDATE"],
+        "supported_entities":["api","database","user","report","auth"],
+        "complexity_levels":["Simple","Moderate","Complex","Enterprise"],
+        "features":{"validation":True}
+    }
