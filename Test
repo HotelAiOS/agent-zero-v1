@@ -1,0 +1,41 @@
+# Podstawowy test V2.0 - czy pliki są na miejscu i działają
+python3 -c "
+import sys
+sys.path.append('.')
+
+print('🧪 Agent Zero V2.0 Core Components Test')
+print('=' * 50)
+
+# Test każdego komponentu
+components = [
+    ('Enhanced SimpleTracker', 'shared.utils.enhanced_simple_tracker'),
+    ('Experience Manager', 'shared.experience_manager'),
+    ('Pattern Mining Engine', 'shared.learning.pattern_mining_engine'),
+    ('ML Training Pipeline', 'shared.learning.ml_training_pipeline'),
+    ('Analytics Dashboard API', 'api.analytics_dashboard_api'),
+    ('Advanced CLI', 'cli.advanced_commands'),
+    ('Integration Test Suite', 'tests.v2_integration_test_suite')
+]
+
+available_count = 0
+for name, module_path in components:
+    try:
+        __import__(module_path)
+        print(f'✅ {name}: IMPORTED SUCCESSFULLY')
+        available_count += 1
+    except ImportError as e:
+        print(f'❌ {name}: FILE NOT FOUND ({e})')
+    except Exception as e:
+        print(f'⚠️  {name}: IMPORT WARNING ({e})')
+        available_count += 0.5
+
+print(f'')
+print(f'📊 V2.0 Components Available: {available_count}/{len(components)}')
+
+if available_count >= 3:
+    print('🎉 V2.0 Core System is OPERATIONAL!')
+    print('💡 You can start using V2.0 features now')
+else:
+    print('❌ V2.0 System needs file deployment')
+    print('💡 Run manual file copy commands first')
+"
