@@ -16,8 +16,8 @@ from dataclasses import dataclass
 import json
 import uuid
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
+# FIXED: Correct path for Docker container
+project_root = Path("/app/project")
 sys.path.insert(0, str(project_root))
 
 # FastAPI imports
@@ -26,21 +26,35 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
-# Import existing Agent Zero components
-try:
-    exec(open(project_root / "simple-tracker.py").read(), globals())
-    exec(open(project_root / "agent_executor.py").read(), globals()) 
-    exec(open(project_root / "neo4j_client.py").read(), globals())
-    exec(open(project_root / "task_decomposer.py").read(), globals())
-except FileNotFoundError as e:
-    logging.warning(f"Could not import components: {e}")
-    # Minimal fallbacks
-    class SimpleTracker:
-        def track_task(self, *args, **kwargs): pass
-
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Import existing Agent Zero components - FIXED PATHS
+try:
+    exec(open(project_root / "simple-tracker.py").read(), globals())
+    
+    # Try to import other components if they exist
+    for component in ["agent_executor.py", "neo4j_client.py", "task_decomposer.py"]:
+        component_path = project_root / component
+        if component_path.exists():
+            exec(open(component_path).read(), globals())
+            logger.info(f"✅ Orchestrator: Imported {component}")
+    
+    components_available = True
+    logger.info("✅ Orchestrator: Successfully imported Agent Zero components")
+    
+except FileNotFoundError as e:
+    logger.warning(f"Could not import components: {e}")
+    components_available = False
+    # Minimal fallbacks
+    class SimpleTracker:
+        def track_task(self, *args, **kwargs): pass
+        def get_daily_stats(self): 
+            return {"total_tasks": 0, "feedback_rate": 0, "avg_rating": 0}
+        def get_model_comparison(self, days=7): 
+            return {}
+        def record_feedback(self, task_id, rating, comment=None): pass
 
 # FastAPI app
 app = FastAPI(
@@ -80,7 +94,12 @@ class OrchestrationResult:
     status: str
 
 # Initialize existing components
-tracker = SimpleTracker()
+try:
+    tracker = SimpleTracker()
+    logger.info("✅ Orchestrator: SimpleTracker initialized")
+except Exception as e:
+    logger.error(f"Error initializing SimpleTracker: {e}")
+    tracker = None
 
 # Agent orchestration logic using existing components
 class IntegratedOrchestrator:
@@ -152,7 +171,7 @@ class IntegratedOrchestrator:
         Maintains compatibility with existing task breakdown system
         """
         # This should integrate with actual task_decomposer.py functions
-        # For now, creating compatible structure
+        # For now, creating compatible structure based on complexity
         
         base_subtasks = []
         
@@ -196,36 +215,38 @@ class IntegratedOrchestrator:
         This maintains learning from CLI feedback system
         """
         try:
-            # Get model performance from SimpleTracker
-            model_comparison = tracker.get_model_comparison(days=7)
-            
-            # Task-specific model preferences (using existing logic)
-            task_preferences = {
-                "code": ["qwen2.5-coder:7b", "llama3.2-3b"],
-                "analysis": ["llama3.2-3b", "qwen2.5-coder:7b"],
-                "testing": ["llama3.2-3b"],
-                "docs": ["qwen2.5-coder:7b", "llama3.2-3b"],
-                "general": ["llama3.2-3b"]
-            }
-            
-            preferred_models = task_preferences.get(task_type, ["llama3.2-3b"])
-            
-            # Select best performing model from preferences
-            best_model = preferred_models[0]  # Default
-            best_score = -1
-            
-            for model in preferred_models:
-                if model in model_comparison:
-                    score = model_comparison[model].get("score", 0)
-                    if score > best_score:
-                        best_score = score
-                        best_model = model
-            
-            return best_model
+            if tracker and components_available:
+                # Get model performance from SimpleTracker
+                model_comparison = tracker.get_model_comparison(days=7)
+                
+                # Task-specific model preferences (using existing logic)
+                task_preferences = {
+                    "code": ["qwen2.5-coder:7b", "llama3.2-3b"],
+                    "analysis": ["llama3.2-3b", "qwen2.5-coder:7b"],
+                    "testing": ["llama3.2-3b"],
+                    "docs": ["qwen2.5-coder:7b", "llama3.2-3b"],
+                    "general": ["llama3.2-3b"]
+                }
+                
+                preferred_models = task_preferences.get(task_type, ["llama3.2-3b"])
+                
+                # Select best performing model from preferences
+                best_model = preferred_models[0]  # Default
+                best_score = -1
+                
+                for model in preferred_models:
+                    if model in model_comparison:
+                        score = model_comparison[model].get("score", 0)
+                        if score > best_score:
+                            best_score = score
+                            best_model = model
+                
+                return best_model
             
         except Exception as e:
             logger.warning(f"Model selection error: {e}")
-            return "llama3.2-3b"  # Safe default
+        
+        return "llama3.2-3b"  # Safe default
     
     def track_orchestration(self, orchestration_id: str, request: OrchestrationRequest, assignments: List[AgentAssignment]):
         """
@@ -233,20 +254,21 @@ class IntegratedOrchestrator:
         Maintains compatibility with CLI tracking and Kaizen feedback
         """
         try:
-            # Track main orchestration task
-            tracker.track_task(
-                task_id=orchestration_id,
-                task_type="orchestration",
-                model_used="orchestrator_v1",
-                model_recommended="orchestrator_v1",
-                cost=len(assignments) * 0.001,  # Estimated orchestration cost
-                latency=1000,  # Planning latency
-                context={
-                    "subtask_count": len(assignments),
-                    "complexity": request.complexity,
-                    "original_description": request.task_description
-                }
-            )
+            if tracker and components_available:
+                # Track main orchestration task
+                tracker.track_task(
+                    task_id=orchestration_id,
+                    task_type="orchestration",
+                    model_used="orchestrator_v1",
+                    model_recommended="orchestrator_v1",
+                    cost=len(assignments) * 0.001,  # Estimated orchestration cost
+                    latency=1000,  # Planning latency
+                    context={
+                        "subtask_count": len(assignments),
+                        "complexity": request.complexity,
+                        "original_description": request.task_description
+                    }
+                )
             
         except Exception as e:
             logger.error(f"Tracking error: {e}")
@@ -281,7 +303,8 @@ async def plan_orchestration(request: OrchestrationRequest) -> Dict:
             "coordination_strategy": result.coordination_strategy,
             "status": result.status,
             "integration": "existing_components_used",
-            "tracked_in_simple_tracker": True
+            "tracked_in_simple_tracker": tracker is not None,
+            "components_available": components_available
         }
         
     except Exception as e:
@@ -301,7 +324,7 @@ async def get_orchestration_status(orchestration_id: str):
             "orchestration_id": orchestration_id,
             "status": orchestration["status"],
             "created_at": orchestration["created_at"].isoformat(),
-            "progress": "planning_complete",  # Real implementation would track progress
+            "progress": "planning_complete",
             "integration": "SimpleTracker_compatible"
         }
         
@@ -352,13 +375,59 @@ async def execute_orchestration_background(orchestration_id: str):
         orchestration["completed_at"] = datetime.now()
         
         # Track completion in SimpleTracker
-        tracker.record_feedback(orchestration_id, 4, "Auto-completed orchestration")
+        if tracker and components_available:
+            tracker.record_feedback(orchestration_id, 4, "Auto-completed orchestration")
         
         logger.info(f"Orchestration {orchestration_id} completed")
         
     except Exception as e:
         logger.error(f"Background execution error: {e}")
         orchestrator.active_orchestrations[orchestration_id]["status"] = "failed"
+
+@app.get("/api/v1/agents/status")
+async def get_agents_status():
+    """
+    Get agent status using SimpleTracker data
+    INTEGRATION: Compatible with existing API Gateway endpoint
+    """
+    try:
+        if tracker and components_available:
+            daily_stats = tracker.get_daily_stats()
+            model_comparison = tracker.get_model_comparison(days=1)
+            
+            return {
+                "agents": {
+                    "total_agents": 5,
+                    "active_agents": len(model_comparison),
+                    "total_tasks": daily_stats.get("total_tasks", 0),
+                    "feedback_rate": daily_stats.get("feedback_rate", 0),
+                    "avg_rating": daily_stats.get("avg_rating", 0)
+                },
+                "performance": model_comparison,
+                "orchestrations": {
+                    "active_count": len(orchestrator.active_orchestrations),
+                    "total_planned": sum(1 for o in orchestrator.active_orchestrations.values() if o["status"] == "planned"),
+                    "total_executing": sum(1 for o in orchestrator.active_orchestrations.values() if o["status"] == "executing")
+                },
+                "integration": "SimpleTracker_data",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "agents": {
+                    "total_agents": 3,
+                    "active_agents": 2,
+                    "total_tasks": 0,
+                    "feedback_rate": 0,
+                    "avg_rating": 0
+                },
+                "performance": {},
+                "status": "degraded - components not available"
+            }
+        
+    except Exception as e:
+        logger.error(f"Status error: {e}")
+        return {"error": str(e), "status": "error"}
 
 @app.get("/")
 async def root():
@@ -368,10 +437,13 @@ async def root():
         "version": "1.0.0",
         "integration": "agent_executor + neo4j_client + task_decomposer + SimpleTracker",
         "active_orchestrations": len(orchestrator.active_orchestrations),
+        "components_available": components_available,
+        "tracker_initialized": tracker is not None,
         "endpoints": {
             "plan": "/api/v1/orchestration/plan",
             "status": "/api/v1/orchestration/{id}/status",
-            "execute": "/api/v1/orchestration/{id}/execute"
+            "execute": "/api/v1/orchestration/{id}/execute",
+            "agents_status": "/api/v1/agents/status"
         }
     }
 
@@ -382,8 +454,10 @@ async def health_check():
         "status": "healthy",
         "service": "integrated-agent-orchestrator",
         "integration": "agent_zero_v1_components",
-        "active_orchestrations": len(orchestrator.active_orchestrations)
+        "active_orchestrations": len(orchestrator.active_orchestrations),
+        "components_available": components_available,
+        "timestamp": datetime.now().isoformat()
     }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(app, host="0.0.0.0", port=8080)

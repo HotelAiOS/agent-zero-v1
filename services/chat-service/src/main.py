@@ -15,8 +15,8 @@ from datetime import datetime
 from typing import Dict, Set
 import uuid
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
+# FIXED: Correct path for Docker container
+project_root = Path("/app/project")
 sys.path.insert(0, str(project_root))
 
 # FastAPI and WebSocket imports
@@ -28,15 +28,24 @@ import uvicorn
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import existing Agent Zero components
+# Import existing Agent Zero components - FIXED PATHS
 try:
     exec(open(project_root / "simple-tracker.py").read(), globals())
-    exec(open(project_root / "feedback-loop-engine.py").read(), globals()) 
+    # Try to import feedback-loop-engine if it exists
+    feedback_engine_path = project_root / "feedback-loop-engine.py"
+    if feedback_engine_path.exists():
+        exec(open(feedback_engine_path).read(), globals())
+    components_available = True
+    logger.info("✅ WebSocket: Successfully imported Agent Zero components")
 except FileNotFoundError as e:
     logger.warning(f"Could not import components: {e}")
+    components_available = False
+    # Fallback class to prevent errors
     class SimpleTracker:
-        def get_daily_stats(self): return {"total_tasks": 0}
-        def get_model_comparison(self, days=7): return {}
+        def get_daily_stats(self): 
+            return {"total_tasks": 0, "feedback_rate": 0, "avg_rating": 0}
+        def get_model_comparison(self, days=7): 
+            return {}
 
 # FastAPI app
 app = FastAPI(
@@ -57,7 +66,13 @@ app.add_middleware(
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Set[WebSocket] = set()
-        self.tracker = SimpleTracker()
+        # Initialize tracker with proper error handling
+        try:
+            self.tracker = SimpleTracker()
+            logger.info("✅ WebSocket: SimpleTracker initialized")
+        except Exception as e:
+            logger.error(f"Error initializing SimpleTracker: {e}")
+            self.tracker = None
     
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -74,29 +89,59 @@ class ConnectionManager:
     async def send_current_status(self, websocket: WebSocket):
         """Send current system status using SimpleTracker data"""
         try:
-            daily_stats = self.tracker.get_daily_stats()
-            model_comparison = self.tracker.get_model_comparison(days=1)
-            
-            status_message = {
-                "type": "status_update",
-                "timestamp": datetime.now().isoformat(),
-                "data": {
-                    "agents": {
-                        "active_models": list(model_comparison.keys()),
-                        "total_tasks": daily_stats.get("total_tasks", 0),
-                        "feedback_rate": daily_stats.get("feedback_rate", 0),
-                        "avg_rating": daily_stats.get("avg_rating", 0)
+            if self.tracker and components_available:
+                daily_stats = self.tracker.get_daily_stats()
+                model_comparison = self.tracker.get_model_comparison(days=1)
+                
+                status_message = {
+                    "type": "status_update",
+                    "timestamp": datetime.now().isoformat(),
+                    "data": {
+                        "agents": {
+                            "active_models": list(model_comparison.keys()),
+                            "total_tasks": daily_stats.get("total_tasks", 0),
+                            "feedback_rate": daily_stats.get("feedback_rate", 0),
+                            "avg_rating": daily_stats.get("avg_rating", 0)
+                        },
+                        "performance": model_comparison,
+                        "system_health": "operational"
                     },
-                    "performance": model_comparison,
-                    "system_health": "operational"
-                },
-                "source": "SimpleTracker_realtime"
-            }
+                    "source": "SimpleTracker_realtime",
+                    "components_available": components_available
+                }
+            else:
+                # Fallback status when components not available
+                status_message = {
+                    "type": "status_update",
+                    "timestamp": datetime.now().isoformat(),
+                    "data": {
+                        "agents": {
+                            "active_models": [],
+                            "total_tasks": 0,
+                            "feedback_rate": 0,
+                            "avg_rating": 0
+                        },
+                        "performance": {},
+                        "system_health": "degraded"
+                    },
+                    "source": "fallback_mode",
+                    "components_available": components_available
+                }
             
             await websocket.send_text(json.dumps(status_message))
             
         except Exception as e:
             logger.error(f"Error sending status: {e}")
+            # Send error status
+            error_message = {
+                "type": "error",
+                "message": "Error retrieving system status",
+                "timestamp": datetime.now().isoformat()
+            }
+            try:
+                await websocket.send_text(json.dumps(error_message))
+            except:
+                pass
 
     async def broadcast_update(self, message: Dict):
         """Broadcast update to all connected clients"""
@@ -138,7 +183,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 message = json.loads(data)
                 
                 if message.get("type") == "ping":
-                    await websocket.send_text(json.dumps({"type": "pong", "timestamp": datetime.now().isoformat()}))
+                    await websocket.send_text(json.dumps({
+                        "type": "pong", 
+                        "timestamp": datetime.now().isoformat()
+                    }))
                 
                 elif message.get("type") == "request_status":
                     await manager.send_current_status(websocket)
@@ -173,24 +221,25 @@ async def monitor_system_changes(websocket: WebSocket):
     
     while True:
         try:
-            # Get current stats from SimpleTracker
-            current_stats = manager.tracker.get_daily_stats()
-            
-            # Check if stats changed significantly
-            if last_stats is None or stats_changed(last_stats, current_stats):
-                update_message = {
-                    "type": "system_update",
-                    "timestamp": datetime.now().isoformat(),
-                    "changes": {
-                        "total_tasks": current_stats.get("total_tasks", 0),
-                        "feedback_rate": current_stats.get("feedback_rate", 0),
-                        "avg_rating": current_stats.get("avg_rating", 0)
-                    },
-                    "integration": "SimpleTracker_monitoring"
-                }
+            if manager.tracker and components_available:
+                # Get current stats from SimpleTracker
+                current_stats = manager.tracker.get_daily_stats()
                 
-                await manager.broadcast_update(update_message)
-                last_stats = current_stats
+                # Check if stats changed significantly
+                if last_stats is None or stats_changed(last_stats, current_stats):
+                    update_message = {
+                        "type": "system_update",
+                        "timestamp": datetime.now().isoformat(),
+                        "changes": {
+                            "total_tasks": current_stats.get("total_tasks", 0),
+                            "feedback_rate": current_stats.get("feedback_rate", 0),
+                            "avg_rating": current_stats.get("avg_rating", 0)
+                        },
+                        "integration": "SimpleTracker_monitoring"
+                    }
+                    
+                    await manager.broadcast_update(update_message)
+                    last_stats = current_stats
             
             # Check every 5 seconds
             await asyncio.sleep(5)
@@ -233,7 +282,9 @@ async def root():
         "version": "1.0.0",
         "websocket_endpoint": "/ws/agents/live-monitor",
         "integration": "SimpleTracker + FeedbackLoopEngine",
-        "connected_clients": len(manager.active_connections)
+        "connected_clients": len(manager.active_connections),
+        "components_available": components_available,
+        "tracker_initialized": manager.tracker is not None
     }
 
 @app.get("/health") 
@@ -243,7 +294,18 @@ async def health_check():
         "status": "healthy",
         "service": "integrated-websocket",
         "connections": len(manager.active_connections),
-        "integration": "agent_zero_v1"
+        "integration": "agent_zero_v1",
+        "components_available": components_available,
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/api/v1/connections")
+async def get_connections():
+    """Get connection status"""
+    return {
+        "active_connections": len(manager.active_connections),
+        "components_available": components_available,
+        "tracker_status": "initialized" if manager.tracker else "not_available"
     }
 
 if __name__ == "__main__":
