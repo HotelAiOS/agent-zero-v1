@@ -1,13 +1,14 @@
 """
-Orchestration Module - Team coordination and task management
+Orchestration Module - Team coordination and task management  
 """
 
 from .task_decomposer import (
     Task,
-    TaskPriority,
+    TaskPriority, 
     TaskStatus,
     TaskDependency,
-    TaskDecomposer
+    TaskDecomposer,
+    TaskType
 )
 
 from .team_builder import (
@@ -16,13 +17,21 @@ from .team_builder import (
     TeamMember
 )
 
+from .planner import (
+    IntelligentPlanner,
+    ProjectPlan
+)
+
 __all__ = [
     'Task',
     'TaskPriority',
-    'TaskStatus',
+    'TaskStatus', 
     'TaskDependency',
     'TaskDecomposer',
+    'TaskType',
     'TeamBuilder',
     'TeamComposition',
-    'TeamMember'
+    'TeamMember',
+    'IntelligentPlanner',
+    'ProjectPlan'
 ]
