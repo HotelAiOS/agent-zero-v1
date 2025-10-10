@@ -1,0 +1,22 @@
+# Agent Zero V1 - V2.0 Intelligence Layer Requirements
+# Additional dependencies for enhanced functionality
+
+# Rich terminal interface (optional but recommended)
+rich>=13.0.0
+
+# Core Python dependencies (usually included)
+sqlite3  # Built-in with Python
+datetime  # Built-in with Python
+json      # Built-in with Python
+pathlib   # Built-in with Python
+dataclasses  # Built-in with Python 3.7+, backport for older versions
+typing    # Built-in with Python 3.5+
+threading # Built-in with Python
+logging   # Built-in with Python
+enum      # Built-in with Python 3.4+
+
+# Optional: Enhanced AST parsing for code evaluation
+ast       # Built-in with Python
+
+# Note: All V2.0 components are designed to work with Python 3.7+ stdlib
+# Only 'rich' is an external dependency for enhanced CLI output

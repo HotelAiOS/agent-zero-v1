@@ -1,329 +1,244 @@
 #!/usr/bin/env python3
 """
-Agent Zero V1 CLI - Enhanced with Kaizen Feedback Loop
-Critical enhancement: After every task, collect user feedback for continuous learning
+Agent Zero V1 - Enhanced CLI with V2.0 Intelligence Layer
+Week 43 Implementation
 """
 
 import typer
 import uuid
+import sys
 from datetime import datetime
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
-from typing import Optional
+from rich.table import Table
 from pathlib import Path
-import sqlite3
 
-app = typer.Typer()
+# Add shared to path
+sys.path.append('.')
+sys.path.append('./shared')
+
+try:
+    from shared.kaizen import (
+        get_intelligent_model_recommendation,
+        evaluate_task_from_cli,
+        get_success_summary,
+        generate_kaizen_report_cli,
+        get_cost_analysis_cli,
+        discover_user_patterns_cli
+    )
+    from shared.knowledge import sync_tracker_to_graph_cli, get_model_insights_cli
+    from shared.utils.simple_tracker import SimpleTracker
+    v2_available = True
+except ImportError as e:
+    print(f"Warning: V2.0 components not available: {e}")
+    v2_available = False
+
+app = typer.Typer(help="Agent Zero V1 CLI with V2.0 Intelligence Layer")
 console = Console()
 
-# Initialize simple tracker for immediate Kaizen feedback
-class SimpleTracker:
-    """Minimal tracking until full Kaizen system ready"""
-    
-    def __init__(self, db_path: str = ".agent-zero/tracker.db"):
-        self.db_path = Path.home() / db_path
-        self.db_path.parent.mkdir(exist_ok=True)
-        self.conn = sqlite3.connect(self.db_path)
-        self.init_schema()
-    
-    def init_schema(self):
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS tasks (
-                id TEXT PRIMARY KEY,
-                task_type TEXT,
-                model_used TEXT,
-                model_recommended TEXT,
-                cost_usd REAL,
-                latency_ms INTEGER,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS feedback (
-                task_id TEXT,
-                rating INTEGER,
-                comment TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (task_id) REFERENCES tasks(id)
-            )
-        ''')
-        self.conn.commit()
-    
-    def track_task(self, task_id: str, task_type: str, model_used: str, 
-                   model_recommended: str, cost: float, latency: int):
-        self.conn.execute(
-            "INSERT INTO tasks (id, task_type, model_used, model_recommended, cost_usd, latency_ms) VALUES (?, ?, ?, ?, ?, ?)",
-            (task_id, task_type, model_used, model_recommended, cost, latency)
-        )
-        self.conn.commit()
-    
-    def record_feedback(self, task_id: str, rating: int, comment: str = None):
-        self.conn.execute(
-            "INSERT INTO feedback (task_id, rating, comment) VALUES (?, ?, ?)",
-            (task_id, rating, comment)
-        )
-        self.conn.commit()
-
-# Global tracker instance
-tracker = SimpleTracker()
-
-def ask_for_quick_feedback(task_id: str, model_used: str) -> None:
-    """
-    CRITICAL KAIZEN COMPONENT: Simple 1-click feedback after task completion
-    This is the foundation of our learning system!
-    """
-    console.print("\n" + "="*50)
-    console.print("🔄 Quick feedback (optional):", style="bold blue")
-    console.print("Rate this result: [1-5] or Enter to skip")
-    console.print("="*50)
-    
-    try:
-        rating = input("Rating: ").strip()
-        if rating and rating.isdigit() and 1 <= int(rating) <= 5:
-            comment = None
-            if int(rating) <= 2:
-                comment = input("What went wrong? (optional): ").strip() or None
-            
-            tracker.record_feedback(task_id, int(rating), comment)
-            console.print("✅ Thanks! This helps us improve.", style="green")
-            
-            if int(rating) <= 2:
-                console.print(f"⚠️  Low rating noted for {model_used}. We'll learn from this!", style="yellow")
-        else:
-            console.print("⏭️  Skipped feedback", style="dim")
-    except KeyboardInterrupt:
-        console.print("\n⏭️  Feedback skipped", style="dim")
-    except Exception:
-        pass
-
 @app.command()
-def ask(question: str, provider: Optional[str] = None):
-    """Ask a question to Agent Zero with Kaizen feedback collection"""
+def ask(
+    question: str,
+    model: str = typer.Option(None, help="Specific model to use"),
+    priority: str = typer.Option("balanced", help="Priority: cost|quality|speed|balanced"),
+    explain: bool = typer.Option(False, help="Show AI reasoning")
+):
+    """Ask a question with intelligent model selection"""
     
     task_id = str(uuid.uuid4())
-    start_time = datetime.now()
+    console.print(f"🤖 Processing: [bold]{question}[/bold]")
     
-    console.print(f"🤖 Processing question: {question}")
+    # V2.0 model selection
+    if v2_available and not model:
+        recommended_model = get_intelligent_model_recommendation("chat", priority)
+        if explain:
+            console.print(f"🧠 AI selected: {recommended_model} (priority: {priority})")
+    else:
+        recommended_model = model or "llama3.2-3b"
     
-    model_used = provider or "llama3.2-3b"
-    model_recommended = "llama3.2-3b"
-    
-    import time
-    time.sleep(1)
-    
-    response = f"Mock response to: {question} (using {model_used})"
-    
-    end_time = datetime.now()
-    latency_ms = int((end_time - start_time).total_seconds() * 1000)
-    cost_usd = 0.001 
-    
-    tracker.track_task(
-        task_id=task_id,
-        task_type="chat",
-        model_used=model_used,
-        model_recommended=model_recommended,
-        cost=cost_usd,
-        latency=latency_ms
-    )
+    # Mock response
+    response = f"Mock response using {recommended_model}\n\nThis demonstrates V2.0 Intelligence Layer integration.\nThe system selected {recommended_model} based on {priority} optimization."
     
     console.print(Panel(response, title="Agent Zero Response", border_style="green"))
     
-    ask_for_quick_feedback(task_id, model_used)
+    # V2.0 feedback
+    if v2_available:
+        tracker = SimpleTracker()
+        tracker.track_task(
+            task_id=task_id,
+            task_type="chat", 
+            model_used=recommended_model,
+            model_recommended=recommended_model,
+            cost=0.0,
+            latency=800,
+            context={"question": question}
+        )
+        
+        rating = typer.prompt("Rate this response (1-5)", type=int, default=4)
+        if 1 <= rating <= 5:
+            tracker.record_feedback(task_id, rating)
+            console.print("✅ Feedback recorded with V2.0 learning", style="green")
 
 @app.command()
-def code(description: str, provider: Optional[str] = None):
-    """Generate code with Kaizen feedback collection"""
+def kaizen_report(
+    days: int = typer.Option(1, help="Days to analyze"),
+    format: str = typer.Option("summary", help="Format: summary|detailed")
+):
+    """Generate Kaizen intelligence report"""
     
-    task_id = str(uuid.uuid4())
-    start_time = datetime.now()
-    
-    console.print(f"💻 Generating code: {description}")
-    
-    model_used = provider or "qwen2.5-coder:7b"
-    model_recommended = "qwen2.5-coder:7b"
-    
-    import time
-    time.sleep(2)
-    
-    code_output = f'''# Generated code for: {description}
-def example_function():
-    """Mock generated code using {model_used}"""
-    return "Hello, World!"
-    
-# TODO: Implement actual functionality
-print(example_function())
-'''
-    
-    end_time = datetime.now()
-    latency_ms = int((end_time - start_time).total_seconds() * 1000)
-    cost_usd = 0.005
-    
-    tracker.track_task(
-        task_id=task_id,
-        task_type="code_generation",
-        model_used=model_used,
-        model_recommended=model_recommended,
-        cost=cost_usd,
-        latency=latency_ms
-    )
-    
-    console.print(Panel(code_output, title="Generated Code", border_style="cyan"))
-    
-    ask_for_quick_feedback(task_id, model_used)
-
-@app.command()
-def pipeline(description: str, provider: Optional[str] = None):
-    """Execute a complex pipeline with Kaizen feedback"""
-    
-    task_id = str(uuid.uuid4())
-    start_time = datetime.now()
-    
-    console.print(f"🔧 Executing pipeline: {description}")
-    
-    model_used = provider or "llama3.2-3b"
-    model_recommended = "llama3.2-3b"
-    
-    import time
-    time.sleep(3)
-    
-    pipeline_output = f"Pipeline '{description}' executed successfully using {model_used}"
-    
-    end_time = datetime.now()
-    latency_ms = int((end_time - start_time).total_seconds() * 1000)
-    cost_usd = 0.010
-    
-    tracker.track_task(
-        task_id=task_id,
-        task_type="pipeline",
-        model_used=model_used,
-        model_recommended=model_recommended,
-        cost=cost_usd,
-        latency=latency_ms
-    )
-    
-    console.print(Panel(pipeline_output, title="Pipeline Result", border_style="magenta"))
-    
-    ask_for_quick_feedback(task_id, model_used)
-
-@app.command()
-def compare_models():
-    """
-    KAIZEN GOLD: Show which model has best quality/cost ratio
-    This gives immediate visibility into what's working!
-    """
-    
-    console.print("📊 Model Performance Analysis (Last 7 days)")
-    
-    cursor = tracker.conn.execute('''
-        SELECT 
-            t.model_used,
-            COUNT(*) as usage_count,
-            AVG(t.cost_usd) as avg_cost,
-            AVG(f.rating) as avg_rating,
-            COUNT(f.rating) as feedback_count,
-            SUM(CASE WHEN t.model_used != t.model_recommended THEN 1 ELSE 0 END) as overrides
-        FROM tasks t 
-        LEFT JOIN feedback f ON t.id = f.task_id 
-        WHERE t.timestamp >= datetime('now', '-7 days')
-        GROUP BY t.model_used 
-        ORDER BY avg_rating DESC, avg_cost ASC
-    ''')
-    
-    results = cursor.fetchall()
-    
-    if not results:
-        console.print("❌ No data available. Start using the system to see insights!", style="yellow")
+    if not v2_available:
+        console.print("[red]V2.0 components not available[/red]")
         return
     
-    table = Table(title="Model Performance (Last 7 days)")
-    table.add_column("Model", style="cyan")
-    table.add_column("Usage", style="white")
-    table.add_column("Avg Cost", style="yellow")
-    table.add_column("Avg Rating", style="green")
-    table.add_column("Feedback Count", style="blue")
-    table.add_column("Overrides", style="red")
-    table.add_column("Recommendation", style="bold")
+    console.print(f"📊 Generating Kaizen report for {days} day(s)...")
     
-    best_score = 0
-    best_model = None
+    report = generate_kaizen_report_cli(format)
     
-    for row in results:
-        model, usage, avg_cost, avg_rating, feedback_count, overrides = row
-        
-        score = (avg_rating or 0) * 10 - (avg_cost or 0) * 100
-        if score > best_score:
-            best_score = score
-            best_model = model
-        
-        recommendation = "⭐ BEST" if model == best_model else ""
-        
-        table.add_row(
-            model,
-            str(usage),
-            f"${avg_cost:.4f}" if avg_cost else "N/A",
-            f"{avg_rating:.1f}/5" if avg_rating else "No feedback",
-            str(feedback_count),
-            str(overrides),
-            recommendation
-        )
+    console.print(Panel(
+        f"📅 **Date**: {report['date']}\n"
+        f"📈 **Summary**: {report['summary']}\n\n"
+        f"🎯 **Key Insights**:\n" +
+        "\n".join(f"   • {insight}" for insight in report['key_insights']) +
+        f"\n\n🔧 **Action Items**:\n" +
+        "\n".join(f"   • {action}" for action in report['top_actions']),
+        title="🧠 Kaizen Intelligence Report",
+        border_style="cyan"
+    ))
+
+@app.command()
+def cost_analysis(
+    days: int = typer.Option(7, help="Days to analyze"),
+    show_optimizations: bool = typer.Option(True, help="Show optimization opportunities")
+):
+    """Analyze costs and optimization opportunities"""
+    
+    if not v2_available:
+        console.print("[red]V2.0 components not available[/red]")
+        return
+    
+    console.print(f"💰 Analyzing costs for {days} day(s)...")
+    
+    analysis = get_cost_analysis_cli(days)
+    
+    console.print(Panel(
+        f"💰 **Total Cost**: ${analysis['total_cost']:.4f}\n"
+        f"📈 **Avg per Task**: ${analysis['avg_cost_per_task']:.4f}\n"  
+        f"🔍 **Total Tasks**: {analysis['total_tasks']}\n"
+        f"💡 **Optimization Opportunities**: {analysis['optimization_opportunities']}",
+        title="Cost Analysis",
+        border_style="yellow"
+    ))
+
+@app.command()
+def pattern_discovery(days: int = typer.Option(30, help="Days to analyze")):
+    """Discover usage patterns and preferences"""
+    
+    if not v2_available:
+        console.print("[red]V2.0 components not available[/red]")
+        return
+    
+    patterns = discover_user_patterns_cli(days)
+    
+    console.print(Panel(
+        f"📈 **Preferences**: {patterns['preferences_count']}\n"
+        f"🎯 **Context Patterns**: {patterns['context_patterns_count']}\n"
+        f"⏰ **Temporal Patterns**: {patterns['temporal_patterns_count']}",
+        title="Pattern Discovery",
+        border_style="magenta"
+    ))
+
+@app.command()
+def model_reasoning(
+    task_type: str = typer.Argument(help="Task type: chat|code_generation|analysis"),
+    priority: str = typer.Option("balanced", help="Priority: cost|quality|speed|balanced")
+):
+    """Show AI reasoning behind model selection"""
+    
+    if not v2_available:
+        console.print("[red]V2.0 components not available[/red]")
+        return
+    
+    model = get_intelligent_model_recommendation(task_type, priority)
+    
+    console.print(Panel(
+        f"🤖 **Recommended**: {model}\n"
+        f"🎯 **Task Type**: {task_type}\n"
+        f"⚖️ **Priority**: {priority}\n\n"
+        f"**Reasoning**: Mock V2.0 development mode - intelligent selection based on {priority} optimization for {task_type} tasks.",
+        title="AI Model Selection Reasoning",
+        border_style="blue"
+    ))
+
+@app.command()
+def success_breakdown(recent_count: int = typer.Option(10, help="Recent tasks to analyze")):
+    """Multi-dimensional success analysis"""
+    
+    if not v2_available:
+        console.print("[red]V2.0 components not available[/red]")
+        return
+    
+    summary = get_success_summary()
+    
+    console.print(Panel(
+        f"📈 **Total Tasks**: {summary['total_tasks']}\n"
+        f"✅ **Successful**: {summary['successful_tasks']}\n"
+        f"🎯 **Success Rate**: {summary['overall_success_rate']:.1%}",
+        title="Success Analysis",
+        border_style="green"
+    ))
+
+@app.command()
+def sync_knowledge_graph(days: int = typer.Option(7, help="Days to sync")):
+    """Sync data to Knowledge Graph"""
+    
+    if not v2_available:
+        console.print("[red]V2.0 components not available[/red]")
+        return
+    
+    result = sync_tracker_to_graph_cli(days)
+    
+    console.print(Panel(
+        f"📊 **Total Tasks**: {result['total_tasks']}\n"
+        f"✅ **Synced**: {result['synced_tasks']}\n" 
+        f"🎯 **Success Rate**: {result['success_rate']:.1%}",
+        title="Knowledge Graph Sync",
+        border_style="cyan"
+    ))
+
+@app.command()
+def status():
+    """Show system status and V2.0 capabilities"""
+    
+    console.print("🤖 **Agent Zero V1 + V2.0 Intelligence Layer Status**\n")
+    
+    # Check components
+    table = Table(title="Component Status")
+    table.add_column("Component", style="cyan")
+    table.add_column("Status", style="green")
+    
+    components = [
+        ("SimpleTracker Enhanced", "✅ Available" if v2_available else "❌ Not Available"),
+        ("Intelligent Model Selector", "✅ Available" if v2_available else "❌ Not Available"),
+        ("Success Evaluator", "✅ Available" if v2_available else "❌ Not Available"),
+        ("Metrics Analyzer", "✅ Available" if v2_available else "❌ Not Available"),
+        ("Knowledge Graph", "✅ Available" if v2_available else "❌ Not Available")
+    ]
+    
+    for component, status in components:
+        color = "green" if "✅" in status else "red"
+        table.add_row(component, f"[{color}]{status}[/{color}]")
     
     console.print(table)
     
-    if best_model:
-        console.print(f"\n🎯 **Recommendation**: Use `{best_model}` for best quality/cost ratio", style="bold green")
-    
-    cursor = tracker.conn.execute('''
-        SELECT model_used, AVG(rating) as avg_rating 
-        FROM tasks t JOIN feedback f ON t.id = f.task_id 
-        WHERE f.rating <= 2 AND t.timestamp >= datetime('now', '-7 days')
-        GROUP BY model_used
-    ''')
-    
-    poor_performers = cursor.fetchall()
-    if poor_performers:
-        console.print("\n⚠️  **Issues detected**:", style="bold red")
-        for model, rating in poor_performers:
-            console.print(f"   • {model}: Low rating ({rating:.1f}/5) - needs attention")
-
-@app.command()
-def kaizen_status():
-    """Show current Kaizen learning status"""
-    
-    console.print("🧠 Kaizen Learning Status")
-    
-    cursor = tracker.conn.execute('''
-        SELECT 
-            COUNT(DISTINCT t.id) as total_tasks,
-            COUNT(f.task_id) as feedback_count,
-            AVG(f.rating) as avg_rating,
-            SUM(t.cost_usd) as total_cost
-        FROM tasks t 
-        LEFT JOIN feedback f ON t.id = f.task_id 
-        WHERE t.timestamp >= datetime('now', '-7 days')
-    ''')
-    
-    stats = cursor.fetchone()
-    total_tasks, feedback_count, avg_rating, total_cost = stats
-    
-    feedback_rate = (feedback_count / total_tasks * 100) if total_tasks > 0 else 0
-    
-    console.print(f"📈 **Last 7 days:**")
-    console.print(f"   • Total tasks: {total_tasks}")
-    console.print(f"   • Feedback rate: {feedback_rate:.1f}%")
-    console.print(f"   • Average rating: {avg_rating:.1f}/5" if avg_rating else "   • Average rating: No feedback yet")
-    console.print(f"   • Total cost: ${total_cost:.4f}" if total_cost else "   • Total cost: $0.0000")
-    
-    if feedback_count > 5:
-        console.print("\n🎓 **Learning Insights:**")
-        console.print("   • System is collecting feedback ✅")
-        console.print("   • Ready for pattern recognition")
-        console.print("   • Consider implementing full Kaizen system")
+    if v2_available:
+        console.print("\n🚀 **V2.0 Capabilities Available**:")
+        console.print("   • Intelligent model selection")
+        console.print("   • Multi-dimensional success evaluation")
+        console.print("   • Cost optimization analysis")
+        console.print("   • Pattern-based learning")
+        console.print("   • Daily Kaizen reports")
     else:
-        console.print("\n🌱 **Early Stage:**")
-        console.print("   • Keep using the system to generate insights")
-        console.print("   • Provide feedback to help the system learn")
+        console.print("\n[yellow]⚠️ V2.0 in development mode[/yellow]")
 
 if __name__ == "__main__":
     app()

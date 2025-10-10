@@ -1,1228 +1,975 @@
-# Active Metrics Analyzer - Analytics Module for Agent Zero V1
-# Task: A0-26 Active Metrics Analyzer (Week 44-45)
-# Focus: Real-time Kaizen z alertami i optimization suggestions
-# Zakres: KaizenMetricsAnalyzer, cost optimization engine, daily reports
-# CLI: a0 kaizen-report, a0 cost-analysis
-
+#!/usr/bin/env python3
 """
-Active Metrics Analyzer for Agent Zero V1
-Real-time Kaizen analytics with alerts and optimization
+Agent Zero V1 - Active Metrics Analyzer
+V2.0 Intelligence Layer Component - Week 43 Implementation
 
-This system provides:
-- Real-time metrics monitoring and analysis
-- Automated alert generation for anomalies
-- Cost optimization recommendations
-- Performance trend analysis
-- Daily/weekly Kaizen reports
+Real-time Kaizen z alertami i optimization suggestions:
+- Threshold monitoring (cost > $0.02, latency > 5s alerts)
+- Daily Kaizen reports - automatyczne podsumowania ulepszeń
+- Cost optimization engine - identyfikacja savings opportunities  
+- Performance trend analysis - wykrywanie degradacji
 """
 
-import asyncio
 import json
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple, Callable
-from dataclasses import dataclass, field, asdict
-from enum import Enum
-import logging
-from pathlib import Path
 import sqlite3
 import statistics
-import numpy as np
-from collections import defaultdict, deque
-import schedule
-import threading
+from datetime import datetime, timedelta
+from dataclasses import dataclass, asdict, field
+from typing import Dict, List, Optional, Tuple, Any, Set
+from pathlib import Path
+from enum import Enum
+import logging
+import math
 
 # Import existing components
-try:
-    import sys
-    sys.path.insert(0, '.')
-    from simple_tracker import SimpleTracker
-    from success_failure_classifier import SuccessClassifier, SuccessEvaluation, SuccessLevel
-    from project_orchestrator import ProjectOrchestrator, Project, ProjectState, ProjectMetrics
-    from feedback_loop_engine import FeedbackLoopEngine
-except ImportError as e:
-    logging.warning(f"Could not import existing components: {e}")
-    # Fallback classes for testing
-    class SimpleTracker:
-        def track_event(self, event): pass
-        def get_daily_stats(self): 
-            return type('', (), {'get_total_tasks': lambda: 0, 'get_avg_rating': lambda: 0})()
-
-class AlertSeverity(Enum):
-    """Alert severity levels"""
-    INFO = "info"
-    WARNING = "warning"
-    CRITICAL = "critical"
-    EMERGENCY = "emergency"
+import sys
+sys.path.append('.')
+from simple_tracker import SimpleTracker
 
 class AlertType(Enum):
-    """Types of alerts"""
-    COST_OVERRUN = "cost_overrun"
-    TIME_OVERRUN = "time_overrun" 
-    QUALITY_DEGRADATION = "quality_degradation"
-    FAILURE_SPIKE = "failure_spike"
-    PERFORMANCE_ANOMALY = "performance_anomaly"
-    BUDGET_EXHAUSTION = "budget_exhaustion"
-    RESOURCE_SHORTAGE = "resource_shortage"
-    SLA_VIOLATION = "sla_violation"
-    TREND_ANOMALY = "trend_anomaly"
+    """Typy alertów systemu"""
+    HIGH_COST = "HIGH_COST"
+    HIGH_LATENCY = "HIGH_LATENCY"
+    LOW_QUALITY = "LOW_QUALITY"
+    FREQUENT_FAILURES = "FREQUENT_FAILURES"
+    MODEL_DEGRADATION = "MODEL_DEGRADATION"
+    COST_SPIKE = "COST_SPIKE"
 
-class MetricTrend(Enum):
-    """Metric trend directions"""
-    IMPROVING = "improving"
-    STABLE = "stable"
-    DEGRADING = "degrading"
-    VOLATILE = "volatile"
+class AlertSeverity(Enum):
+    """Poziomy ważności alertów"""
+    CRITICAL = "CRITICAL"    # Wymaga natychmiastowej akcji
+    WARNING = "WARNING"      # Wymaga uwagi
+    INFO = "INFO"           # Informacyjny
+
+class TrendDirection(Enum):
+    """Kierunki trendów"""
+    IMPROVING = "IMPROVING"
+    STABLE = "STABLE"
+    DEGRADING = "DEGRADING"
 
 @dataclass
 class Alert:
-    """Alert notification"""
-    alert_id: str
+    """Alert systemowy"""
     alert_type: AlertType
     severity: AlertSeverity
-    title: str
-    description: str
-    entity_id: str  # Project/Task/System ID
-    entity_type: str
+    message: str
+    affected_model: Optional[str] = None
+    affected_task_type: Optional[str] = None
+    metric_value: Optional[float] = None
+    threshold_value: Optional[float] = None
+    suggestion: Optional[str] = None
+    timestamp: datetime = field(default_factory=datetime.now)
+
+@dataclass
+class MetricTrend:
+    """Trend metryki w czasie"""
     metric_name: str
     current_value: float
-    threshold_value: float
-    trend: Optional[MetricTrend] = None
-    recommendations: List[str] = field(default_factory=list)
-    timestamp: datetime = field(default_factory=datetime.now)
-    acknowledged: bool = False
-    resolved: bool = False
+    previous_value: float
+    change_percent: float
+    direction: TrendDirection
+    significance: float  # 0.0-1.0 - jak znacząca jest zmiana
 
 @dataclass
-class MetricSnapshot:
-    """Point-in-time metric reading"""
-    metric_name: str
-    entity_id: str
-    entity_type: str
-    value: float
-    timestamp: datetime
-    context: Dict[str, Any] = field(default_factory=dict)
-
-@dataclass
-class TrendAnalysis:
-    """Trend analysis result"""
-    metric_name: str
-    entity_id: str
-    trend_direction: MetricTrend
-    trend_strength: float  # 0-1, how strong the trend is
-    prediction_7d: Optional[float] = None
-    prediction_30d: Optional[float] = None
-    confidence: float = 0.0
-    data_points: int = 0
-    analysis_period_days: int = 7
-
-@dataclass
-class OptimizationSuggestion:
-    """Optimization recommendation"""
-    suggestion_id: str
-    category: str
-    title: str
+class CostOptimization:
+    """Sugestia optymalizacji kosztów"""
     description: str
-    expected_impact: str
-    confidence: float
-    implementation_effort: str  # "low", "medium", "high"
-    priority: int  # 1-10
-    related_metrics: List[str] = field(default_factory=list)
-    success_probability: float = 0.0
+    current_cost: float
+    projected_savings: float
+    confidence: float  # 0.0-1.0
+    implementation_effort: str  # "LOW", "MEDIUM", "HIGH"
+    affected_models: List[str]
+    rationale: str
 
-class MetricsCollector:
-    """Collects metrics from various system components"""
+@dataclass
+class KaizenReport:
+    """Dzienny raport Kaizen"""
+    report_date: datetime
+    total_tasks: int
+    total_cost: float
+    avg_quality: float
+    alerts: List[Alert]
+    trends: List[MetricTrend]
+    optimizations: List[CostOptimization]
+    key_insights: List[str]
+    action_items: List[str]
+
+class ThresholdMonitor:
+    """Monitor progów metryk z alertami"""
     
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self.collection_interval = 60  # seconds
-        self._collectors = {}
-        self._running = False
-    
-    def register_collector(self, name: str, collector_func: Callable[[], Dict[str, float]]):
-        """Register a metric collector function"""
-        self._collectors[name] = collector_func
-        self.logger.info(f"Registered collector: {name}")
-    
-    async def start_collection(self, callback: Optional[Callable] = None):
-        """Start continuous metric collection"""
-        
-        self._running = True
-        self.logger.info("Started metrics collection")
-        
-        while self._running:
-            try:
-                timestamp = datetime.now()
-                
-                for collector_name, collector_func in self._collectors.items():
-                    try:
-                        metrics = collector_func()
-                        
-                        for metric_name, value in metrics.items():
-                            snapshot = MetricSnapshot(
-                                metric_name=metric_name,
-                                entity_id=collector_name,
-                                entity_type="system_component",
-                                value=value,
-                                timestamp=timestamp
-                            )
-                            
-                            if callback:
-                                await callback(snapshot)
-                    
-                    except Exception as e:
-                        self.logger.error(f"Error in collector {collector_name}: {e}")
-                
-                await asyncio.sleep(self.collection_interval)
-            
-            except Exception as e:
-                self.logger.error(f"Error in metric collection loop: {e}")
-                await asyncio.sleep(5)
-    
-    def stop_collection(self):
-        """Stop metric collection"""
-        self._running = False
-        self.logger.info("Stopped metrics collection")
-
-class AlertManager:
-    """Manages alerts and notifications"""
-    
-    def __init__(self, db_path: str = "alerts.db"):
-        self.db_path = db_path
-        self.logger = logging.getLogger(__name__)
-        self._initialize_database()
-        
-        # Alert rules and thresholds
-        self.alert_rules = {
-            AlertType.COST_OVERRUN: {
-                'threshold_multiplier': 1.2,  # 20% over estimate
-                'severity': AlertSeverity.WARNING
+        # Domyślne progi - można konfigurować
+        self.thresholds = {
+            'cost_per_task': {
+                'warning': 0.02,
+                'critical': 0.05
             },
-            AlertType.TIME_OVERRUN: {
-                'threshold_multiplier': 1.3,  # 30% over estimate
-                'severity': AlertSeverity.WARNING
+            'latency_ms': {
+                'warning': 3000,
+                'critical': 8000
             },
-            AlertType.QUALITY_DEGRADATION: {
-                'threshold_value': 0.7,  # Below 70%
-                'severity': AlertSeverity.CRITICAL
+            'quality_rating': {
+                'warning': 2.5,  # Poniżej tego = warning
+                'critical': 2.0  # Poniżej tego = critical
             },
-            AlertType.FAILURE_SPIKE: {
-                'threshold_rate': 0.3,  # 30% failure rate
-                'severity': AlertSeverity.CRITICAL
+            'success_rate': {
+                'warning': 0.7,  # Poniżej 70%
+                'critical': 0.5  # Poniżej 50%
             }
         }
-        
-        # Active alerts cache
-        self._active_alerts = {}
-        self._load_active_alerts()
     
-    def _initialize_database(self):
-        """Initialize alert database"""
-        
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS alerts (
-                    alert_id TEXT PRIMARY KEY,
-                    alert_type TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    metric_name TEXT NOT NULL,
-                    current_value REAL NOT NULL,
-                    threshold_value REAL NOT NULL,
-                    trend TEXT,
-                    recommendations TEXT,
-                    timestamp TIMESTAMP NOT NULL,
-                    acknowledged BOOLEAN DEFAULT FALSE,
-                    resolved BOOLEAN DEFAULT FALSE,
-                    resolved_at TIMESTAMP
-                )
-            """)
-            
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp)
-            """)
-            
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_alerts_entity ON alerts(entity_id, entity_type)
-            """)
-            
-            conn.commit()
-    
-    def _load_active_alerts(self):
-        """Load active alerts from database"""
-        
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT alert_id, alert_type, severity, title, description, entity_id,
-                       entity_type, metric_name, current_value, threshold_value, trend,
-                       recommendations, timestamp, acknowledged, resolved
-                FROM alerts
-                WHERE resolved = FALSE
-            """)
-            
-            for row in cursor.fetchall():
-                try:
-                    alert = Alert(
-                        alert_id=row[0],
-                        alert_type=AlertType(row[1]),
-                        severity=AlertSeverity(row[2]),
-                        title=row[3],
-                        description=row[4],
-                        entity_id=row[5],
-                        entity_type=row[6],
-                        metric_name=row[7],
-                        current_value=row[8],
-                        threshold_value=row[9],
-                        trend=MetricTrend(row[10]) if row[10] else None,
-                        recommendations=json.loads(row[11]) if row[11] else [],
-                        timestamp=datetime.fromisoformat(row[12]),
-                        acknowledged=bool(row[13]),
-                        resolved=bool(row[14])
-                    )
-                    self._active_alerts[alert.alert_id] = alert
-                
-                except Exception as e:
-                    self.logger.error(f"Error loading alert {row[0]}: {e}")
-    
-    def check_metric_for_alerts(self, snapshot: MetricSnapshot, 
-                              historical_data: List[MetricSnapshot]) -> List[Alert]:
-        """Check metric snapshot for alert conditions"""
-        
+    def check_thresholds(self, metrics: Dict[str, float]) -> List[Alert]:
+        """Sprawdza progi i generuje alerty"""
         alerts = []
         
-        # Cost overrun check
-        if 'cost' in snapshot.metric_name.lower():
-            estimated = snapshot.context.get('estimated_value')
-            if estimated and snapshot.value > estimated * 1.2:
-                alert = self._create_alert(
-                    AlertType.COST_OVERRUN,
-                    f"Cost Overrun - {snapshot.entity_id}",
-                    f"Current cost {snapshot.value:.3f} exceeds estimate {estimated:.3f} by {((snapshot.value/estimated)-1)*100:.1f}%",
-                    snapshot,
-                    estimated * 1.2,
-                    ["Review budget allocation", "Optimize resource usage", "Consider alternative approaches"]
-                )
-                alerts.append(alert)
-        
-        # Time overrun check
-        if 'duration' in snapshot.metric_name.lower() or 'time' in snapshot.metric_name.lower():
-            estimated = snapshot.context.get('estimated_value')
-            if estimated and snapshot.value > estimated * 1.3:
-                alert = self._create_alert(
-                    AlertType.TIME_OVERRUN,
-                    f"Time Overrun - {snapshot.entity_id}",
-                    f"Current duration {snapshot.value:.1f} exceeds estimate {estimated:.1f} by {((snapshot.value/estimated)-1)*100:.1f}%",
-                    snapshot,
-                    estimated * 1.3,
-                    ["Optimize task scheduling", "Identify bottlenecks", "Consider parallel execution"]
-                )
-                alerts.append(alert)
-        
-        # Quality degradation check
-        if 'quality' in snapshot.metric_name.lower() or 'success' in snapshot.metric_name.lower():
-            if snapshot.value < 0.7:
-                alert = self._create_alert(
-                    AlertType.QUALITY_DEGRADATION,
-                    f"Quality Degradation - {snapshot.entity_id}",
-                    f"Quality score {snapshot.value:.1%} below acceptable threshold",
-                    snapshot,
-                    0.7,
-                    ["Review quality assurance processes", "Increase testing coverage", "Analyze failure patterns"]
-                )
-                alerts.append(alert)
-        
-        # Trend-based anomaly detection
-        if len(historical_data) >= 5:
-            trend_alert = self._check_trend_anomaly(snapshot, historical_data)
-            if trend_alert:
-                alerts.append(trend_alert)
+        for metric_name, value in metrics.items():
+            if metric_name not in self.thresholds:
+                continue
+            
+            thresholds = self.thresholds[metric_name]
+            
+            # Sprawdź critical threshold
+            if self._exceeds_threshold(metric_name, value, thresholds['critical']):
+                alerts.append(Alert(
+                    alert_type=self._get_alert_type(metric_name),
+                    severity=AlertSeverity.CRITICAL,
+                    message=f"{metric_name} przekroczył krytyczny próg: {value} > {thresholds['critical']}",
+                    metric_value=value,
+                    threshold_value=thresholds['critical'],
+                    suggestion=self._get_threshold_suggestion(metric_name, 'critical')
+                ))
+            
+            # Sprawdź warning threshold
+            elif self._exceeds_threshold(metric_name, value, thresholds['warning']):
+                alerts.append(Alert(
+                    alert_type=self._get_alert_type(metric_name),
+                    severity=AlertSeverity.WARNING,
+                    message=f"{metric_name} przekroczył próg ostrzeżenia: {value} > {thresholds['warning']}",
+                    metric_value=value,
+                    threshold_value=thresholds['warning'],
+                    suggestion=self._get_threshold_suggestion(metric_name, 'warning')
+                ))
         
         return alerts
     
-    def _create_alert(self, alert_type: AlertType, title: str, description: str,
-                     snapshot: MetricSnapshot, threshold: float,
-                     recommendations: List[str]) -> Alert:
-        """Create alert from metric snapshot"""
-        
-        severity = self.alert_rules.get(alert_type, {}).get('severity', AlertSeverity.WARNING)
-        
-        return Alert(
-            alert_id=f"alert_{alert_type.value}_{snapshot.entity_id}_{int(time.time())}",
-            alert_type=alert_type,
-            severity=severity,
-            title=title,
-            description=description,
-            entity_id=snapshot.entity_id,
-            entity_type=snapshot.entity_type,
-            metric_name=snapshot.metric_name,
-            current_value=snapshot.value,
-            threshold_value=threshold,
-            recommendations=recommendations,
-            timestamp=snapshot.timestamp
-        )
+    def _exceeds_threshold(self, metric_name: str, value: float, threshold: float) -> bool:
+        """Sprawdza czy wartość przekracza próg (uwzględnia kierunek)"""
+        if metric_name in ['quality_rating', 'success_rate']:
+            # Dla tych metryk - poniżej progu = problem
+            return value < threshold
+        else:
+            # Dla cost, latency - powyżej progu = problem
+            return value > threshold
     
-    def _check_trend_anomaly(self, snapshot: MetricSnapshot, 
-                           historical_data: List[MetricSnapshot]) -> Optional[Alert]:
-        """Check for trend anomalies in metric data"""
-        
-        # Extract recent values
-        recent_values = [s.value for s in historical_data[-10:]]  # Last 10 readings
-        
-        if len(recent_values) < 5:
-            return None
-        
-        # Calculate trend
-        avg_recent = statistics.mean(recent_values[-3:])  # Last 3 readings
-        avg_historical = statistics.mean(recent_values[:-3])  # Earlier readings
-        
-        # Detect significant changes
-        if avg_historical > 0:
-            change_ratio = (avg_recent - avg_historical) / avg_historical
-            
-            # Significant degradation
-            if change_ratio < -0.2:  # 20% degradation
-                return self._create_alert(
-                    AlertType.TREND_ANOMALY,
-                    f"Negative Trend Detected - {snapshot.entity_id}",
-                    f"Metric {snapshot.metric_name} showing {change_ratio:.1%} degradation over recent readings",
-                    snapshot,
-                    avg_historical,
-                    [
-                        "Investigate root cause of performance degradation",
-                        "Review recent changes that may have impacted performance",
-                        "Consider rollback if degradation continues"
-                    ]
-                )
-        
-        return None
+    def _get_alert_type(self, metric_name: str) -> AlertType:
+        """Mapuje metrykę na typ alertu"""
+        mapping = {
+            'cost_per_task': AlertType.HIGH_COST,
+            'latency_ms': AlertType.HIGH_LATENCY,
+            'quality_rating': AlertType.LOW_QUALITY,
+            'success_rate': AlertType.FREQUENT_FAILURES
+        }
+        return mapping.get(metric_name, AlertType.HIGH_COST)
     
-    def store_alert(self, alert: Alert):
-        """Store alert in database"""
-        
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO alerts
-                (alert_id, alert_type, severity, title, description, entity_id, entity_type,
-                 metric_name, current_value, threshold_value, trend, recommendations, timestamp,
-                 acknowledged, resolved)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                alert.alert_id,
-                alert.alert_type.value,
-                alert.severity.value,
-                alert.title,
-                alert.description,
-                alert.entity_id,
-                alert.entity_type,
-                alert.metric_name,
-                alert.current_value,
-                alert.threshold_value,
-                alert.trend.value if alert.trend else None,
-                json.dumps(alert.recommendations),
-                alert.timestamp.isoformat(),
-                alert.acknowledged,
-                alert.resolved
-            ))
-            conn.commit()
-        
-        self._active_alerts[alert.alert_id] = alert
-        
-        self.logger.info(f"Generated {alert.severity.value} alert: {alert.title}")
-
-class CostOptimizationEngine:
-    """Analyzes costs and provides optimization recommendations"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        
-        # Cost optimization strategies
-        self.optimization_strategies = {
-            'model_selection': {
-                'impact': 'high',
-                'effort': 'low',
-                'description': 'Switch to more cost-effective models for similar quality'
+    def _get_threshold_suggestion(self, metric_name: str, level: str) -> str:
+        """Generuje sugestię dla przekroczonego progu"""
+        suggestions = {
+            'cost_per_task': {
+                'warning': "Rozważ użycie tańszego modelu dla prostych zadań",
+                'critical': "PILNE: Sprawdź konfigurację modeli - koszt jest zbyt wysoki"
             },
-            'batch_processing': {
-                'impact': 'medium',
-                'effort': 'medium', 
-                'description': 'Group similar tasks to reduce overhead costs'
+            'latency_ms': {
+                'warning': "Sprawdź wydajność modeli i rozważ optymalizację",
+                'critical': "PILNE: System działa bardzo wolno - sprawdź infrastrukturę"
             },
-            'caching': {
-                'impact': 'high',
-                'effort': 'medium',
-                'description': 'Cache frequent computations to avoid recomputation'
+            'quality_rating': {
+                'warning': "Jakość odpowiedzi spada - sprawdź feedback użytkowników",
+                'critical': "PILNE: Bardzo niska jakość - wymagana natychmiastowa akcja"
             },
-            'resource_right_sizing': {
-                'impact': 'medium',
-                'effort': 'low',
-                'description': 'Adjust resource allocation based on actual usage patterns'
+            'success_rate': {
+                'warning': "Zwiększona liczba niepowodzeń - sprawdź modele",
+                'critical': "PILNE: Wysoki wskaźnik niepowodzeń - system wymaga naprawy"
             }
         }
-    
-    def analyze_cost_trends(self, cost_history: List[MetricSnapshot],
-                          period_days: int = 30) -> Dict[str, Any]:
-        """Analyze cost trends and identify optimization opportunities"""
         
-        if len(cost_history) < 7:  # Need minimum data
-            return {'status': 'insufficient_data', 'message': 'Need at least 7 days of cost data'}
-        
-        # Calculate trend
-        values = [s.value for s in cost_history[-period_days:]]
-        timestamps = [s.timestamp for s in cost_history[-period_days:]]
-        
-        # Simple linear trend calculation
-        if len(values) >= 2:
-            # Calculate daily cost change
-            days = [(t - timestamps[0]).days for t in timestamps]
-            if days[-1] > 0:
-                slope = (values[-1] - values[0]) / days[-1]  # Cost change per day
-                
-                trend_direction = MetricTrend.IMPROVING if slope < -0.01 else \
-                                MetricTrend.DEGRADING if slope > 0.01 else \
-                                MetricTrend.STABLE
-                
-                # Project future costs
-                projected_7d = values[-1] + (slope * 7)
-                projected_30d = values[-1] + (slope * 30)
-                
-                analysis = {
-                    'current_daily_cost': values[-1] if values else 0,
-                    'trend_direction': trend_direction.value,
-                    'daily_change': slope,
-                    'projected_cost_7d': max(0, projected_7d),
-                    'projected_cost_30d': max(0, projected_30d),
-                    'total_period_cost': sum(values),
-                    'avg_daily_cost': statistics.mean(values),
-                    'cost_volatility': statistics.stdev(values) if len(values) > 1 else 0
-                }
-                
-                # Generate optimization suggestions
-                suggestions = self._generate_cost_optimizations(analysis, cost_history)
-                analysis['optimization_suggestions'] = suggestions
-                
-                return analysis
-        
-        return {'status': 'calculation_error', 'message': 'Could not calculate cost trends'}
-    
-    def _generate_cost_optimizations(self, cost_analysis: Dict[str, Any],
-                                   cost_history: List[MetricSnapshot]) -> List[OptimizationSuggestion]:
-        """Generate specific cost optimization suggestions"""
-        
-        suggestions = []
-        
-        # High cost suggestion
-        if cost_analysis['avg_daily_cost'] > 0.50:  # Above $0.50/day
-            suggestions.append(OptimizationSuggestion(
-                suggestion_id=f"cost_opt_{int(time.time())}_1",
-                category="model_selection",
-                title="Consider More Cost-Effective Models",
-                description="Daily costs are high. Evaluate switching to local models or cheaper cloud options for routine tasks.",
-                expected_impact="20-40% cost reduction",
-                confidence=0.8,
-                implementation_effort="low",
-                priority=8,
-                related_metrics=["cost", "efficiency"],
-                success_probability=0.85
-            ))
-        
-        # Volatile cost suggestion
-        if cost_analysis['cost_volatility'] > 0.1:  # High volatility
-            suggestions.append(OptimizationSuggestion(
-                suggestion_id=f"cost_opt_{int(time.time())}_2",
-                category="resource_planning",
-                title="Stabilize Cost Patterns",
-                description="Cost patterns are volatile. Implement better resource planning and budget controls.",
-                expected_impact="Reduce cost variance by 50%",
-                confidence=0.7,
-                implementation_effort="medium",
-                priority=6,
-                related_metrics=["cost", "reliability"],
-                success_probability=0.70
-            ))
-        
-        # Increasing trend suggestion
-        if cost_analysis.get('daily_change', 0) > 0.05:  # Increasing costs
-            suggestions.append(OptimizationSuggestion(
-                suggestion_id=f"cost_opt_{int(time.time())}_3",
-                category="cost_control",
-                title="Implement Cost Controls",
-                description="Costs are trending upward. Set up automated cost limits and optimization alerts.",
-                expected_impact="Prevent further cost increases",
-                confidence=0.9,
-                implementation_effort="low",
-                priority=9,
-                related_metrics=["cost"],
-                success_probability=0.95
-            ))
-        
-        # Sort by priority
-        suggestions.sort(key=lambda s: s.priority, reverse=True)
-        
-        return suggestions
+        return suggestions.get(metric_name, {}).get(level, "Sprawdź tę metrykę")
 
-class KaizenReporter:
-    """Generates Kaizen reports and insights"""
+class TrendAnalyzer:
+    """Analizator trendów metryk w czasie"""
     
-    def __init__(self, success_classifier: SuccessClassifier):
-        self.success_classifier = success_classifier
-        self.logger = logging.getLogger(__name__)
+    def analyze_trends(self, historical_data: Dict[str, List[Tuple[datetime, float]]]) -> List[MetricTrend]:
+        """
+        Analizuje trendy dla każdej metryki
+        
+        Args:
+            historical_data: Dict[metric_name -> List[(timestamp, value)]]
+        
+        Returns:
+            Lista MetricTrend objects
+        """
+        trends = []
+        
+        for metric_name, data_points in historical_data.items():
+            if len(data_points) < 2:
+                continue
+            
+            # Sortuj po czasie
+            data_points.sort(key=lambda x: x[0])
+            
+            # Podziel na dwie części - poprzedni okres vs obecny
+            split_point = len(data_points) // 2
+            if split_point == 0:
+                continue
+            
+            previous_values = [point[1] for point in data_points[:split_point]]
+            current_values = [point[1] for point in data_points[split_point:]]
+            
+            if not previous_values or not current_values:
+                continue
+            
+            prev_avg = statistics.mean(previous_values)
+            curr_avg = statistics.mean(current_values)
+            
+            if prev_avg == 0:
+                change_percent = 0
+            else:
+                change_percent = ((curr_avg - prev_avg) / prev_avg) * 100
+            
+            # Określ kierunek trendu
+            direction = self._determine_trend_direction(metric_name, change_percent)
+            
+            # Oblicz znaczenie zmiany
+            significance = self._calculate_significance(change_percent, previous_values, current_values)
+            
+            trend = MetricTrend(
+                metric_name=metric_name,
+                current_value=curr_avg,
+                previous_value=prev_avg,
+                change_percent=change_percent,
+                direction=direction,
+                significance=significance
+            )
+            
+            trends.append(trend)
+        
+        return trends
     
-    def generate_daily_report(self, date: Optional[datetime] = None) -> Dict[str, Any]:
-        """Generate daily Kaizen report"""
+    def _determine_trend_direction(self, metric_name: str, change_percent: float) -> TrendDirection:
+        """Określa kierunek trendu uwzględniając semantykę metryki"""
+        
+        # Progi znaczących zmian
+        threshold = 10.0  # 10%
+        
+        if abs(change_percent) < threshold:
+            return TrendDirection.STABLE
+        
+        # Dla metryk gdzie wyższe = lepsze (quality, success_rate)
+        positive_metrics = {'quality_rating', 'success_rate', 'user_satisfaction'}
+        
+        if metric_name in positive_metrics:
+            return TrendDirection.IMPROVING if change_percent > 0 else TrendDirection.DEGRADING
+        else:
+            # Dla metryk gdzie niższe = lepsze (cost, latency)
+            return TrendDirection.IMPROVING if change_percent < 0 else TrendDirection.DEGRADING
+    
+    def _calculate_significance(self, change_percent: float, prev_values: List[float], curr_values: List[float]) -> float:
+        """Oblicza znaczenie zmiany (0.0-1.0)"""
+        
+        # Im większa zmiana procentowa, tym większe znaczenie
+        percent_significance = min(abs(change_percent) / 50.0, 1.0)  # 50% = max significance
+        
+        # Im mniejsza wariancja, tym większa pewność
+        try:
+            prev_var = statistics.variance(prev_values) if len(prev_values) > 1 else 1.0
+            curr_var = statistics.variance(curr_values) if len(curr_values) > 1 else 1.0
+            variance_factor = 1.0 / (1.0 + (prev_var + curr_var) / 2.0)
+        except:
+            variance_factor = 0.5
+        
+        significance = (percent_significance + variance_factor) / 2.0
+        return min(significance, 1.0)
+
+class CostOptimizer:
+    """Engine optymalizacji kosztów"""
+    
+    def __init__(self, tracker: SimpleTracker):
+        self.tracker = tracker
+        
+        # Model cost mapping (cost per 1000 tokens)
+        self.model_costs = {
+            'llama3.2-3b': 0.0,
+            'qwen2.5-coder:7b': 0.0,
+            'mistral:7b': 0.0,
+            'gpt-4': 0.03,
+            'claude-3': 0.015,
+            'gpt-3.5-turbo': 0.002
+        }
+    
+    def find_cost_optimizations(self, days: int = 7) -> List[CostOptimization]:
+        """Znajduje możliwości optymalizacji kosztów"""
+        
+        optimizations = []
+        
+        # 1. Identify expensive models with low quality
+        expensive_low_quality = self._find_expensive_low_quality_models(days)
+        optimizations.extend(expensive_low_quality)
+        
+        # 2. Find overused expensive models for simple tasks
+        overused_expensive = self._find_overused_expensive_models(days)
+        optimizations.extend(overused_expensive)
+        
+        # 3. Identify models with high cost variance
+        cost_variance_issues = self._find_cost_variance_issues(days)
+        optimizations.extend(cost_variance_issues)
+        
+        return optimizations
+    
+    def _find_expensive_low_quality_models(self, days: int) -> List[CostOptimization]:
+        """Znajduje drogie modele z niską jakością"""
+        
+        optimizations = []
+        
+        try:
+            cursor = self.tracker.conn.execute('''
+                SELECT 
+                    t.model_used,
+                    AVG(t.cost_usd) as avg_cost,
+                    AVG(f.rating) as avg_rating,
+                    COUNT(*) as usage_count,
+                    SUM(t.cost_usd) as total_cost
+                FROM tasks t
+                LEFT JOIN feedback f ON t.id = f.task_id
+                WHERE t.timestamp >= datetime('now', '-{} days')
+                AND t.cost_usd > 0
+                GROUP BY t.model_used
+                HAVING usage_count >= 5 AND avg_cost > 0.01 AND avg_rating < 3.5
+            '''.format(days))
+            
+            for row in cursor.fetchall():
+                model, avg_cost, avg_rating, usage_count, total_cost = row
+                
+                # Znajdź tańszą alternatywę
+                alternative_models = self._find_alternative_models(model, avg_rating or 2.5)
+                
+                if alternative_models:
+                    best_alternative = alternative_models[0]
+                    projected_savings = total_cost * 0.7  # Assume 70% savings
+                    
+                    optimization = CostOptimization(
+                        description=f"Zastąp {model} tańszą alternatywą",
+                        current_cost=total_cost,
+                        projected_savings=projected_savings,
+                        confidence=0.8,
+                        implementation_effort="MEDIUM",
+                        affected_models=[model],
+                        rationale=f"{model} ma wysokie koszty (${avg_cost:.4f}/task) przy niskiej jakości ({avg_rating:.1f}/5). Alternatywa: {best_alternative}"
+                    )
+                    
+                    optimizations.append(optimization)
+        
+        except Exception as e:
+            logging.error(f"Error finding expensive low quality models: {e}")
+        
+        return optimizations
+    
+    def _find_overused_expensive_models(self, days: int) -> List[CostOptimization]:
+        """Znajduje nadmiernie używane drogie modele"""
+        
+        optimizations = []
+        
+        try:
+            # Znajdź drogie modele używane do prostych zadań
+            cursor = self.tracker.conn.execute('''
+                SELECT 
+                    t.model_used,
+                    t.task_type,
+                    COUNT(*) as usage_count,
+                    AVG(t.cost_usd) as avg_cost,
+                    SUM(t.cost_usd) as total_cost
+                FROM tasks t
+                WHERE t.timestamp >= datetime('now', '-{} days')
+                AND t.cost_usd > 0.005
+                AND t.task_type IN ('chat', 'analysis')
+                GROUP BY t.model_used, t.task_type
+                HAVING usage_count >= 10
+            '''.format(days))
+            
+            for row in cursor.fetchall():
+                model, task_type, usage_count, avg_cost, total_cost = row
+                
+                # Dla prostych zadań sugeruj tańsze modele
+                if task_type in ['chat'] and avg_cost > 0.002:
+                    projected_savings = total_cost * 0.8  # 80% savings with local models
+                    
+                    optimization = CostOptimization(
+                        description=f"Użyj lokalnych modeli dla zadań {task_type}",
+                        current_cost=total_cost,
+                        projected_savings=projected_savings,
+                        confidence=0.9,
+                        implementation_effort="LOW",
+                        affected_models=[model],
+                        rationale=f"Zadania {task_type} nie wymagają drogich modeli cloud. Lokalne modele dają podobną jakość za darmo."
+                    )
+                    
+                    optimizations.append(optimization)
+        
+        except Exception as e:
+            logging.error(f"Error finding overused expensive models: {e}")
+        
+        return optimizations
+    
+    def _find_cost_variance_issues(self, days: int) -> List[CostOptimization]:
+        """Znajduje problemy z wysoką wariancją kosztów"""
+        
+        optimizations = []
+        
+        try:
+            # Modele z bardzo różnymi kosztami za podobne zadania
+            cursor = self.tracker.conn.execute('''
+                SELECT 
+                    model_used,
+                    task_type,
+                    AVG(cost_usd) as avg_cost,
+                    MIN(cost_usd) as min_cost,
+                    MAX(cost_usd) as max_cost,
+                    COUNT(*) as count
+                FROM tasks
+                WHERE timestamp >= datetime('now', '-{} days')
+                AND cost_usd > 0
+                GROUP BY model_used, task_type
+                HAVING count >= 5 AND (max_cost - min_cost) > avg_cost
+            '''.format(days))
+            
+            for row in cursor.fetchall():
+                model, task_type, avg_cost, min_cost, max_cost, count = row
+                
+                variance_ratio = (max_cost - min_cost) / avg_cost
+                
+                if variance_ratio > 2.0:  # Bardzo wysoka wariancja
+                    optimization = CostOptimization(
+                        description=f"Standaryzuj użycie {model} dla {task_type}",
+                        current_cost=avg_cost * count,
+                        projected_savings=avg_cost * count * 0.3,  # 30% savings
+                        confidence=0.6,
+                        implementation_effort="MEDIUM",
+                        affected_models=[model],
+                        rationale=f"Koszt {model} dla {task_type} waha się od ${min_cost:.4f} do ${max_cost:.4f}. Standaryzacja może obniżyć koszty."
+                    )
+                    
+                    optimizations.append(optimization)
+        
+        except Exception as e:
+            logging.error(f"Error finding cost variance issues: {e}")
+        
+        return optimizations
+    
+    def _find_alternative_models(self, expensive_model: str, min_quality: float) -> List[str]:
+        """Znajduje tańsze alternatywy dla drogiego modelu"""
+        
+        # Proste mapowanie - można rozszerzyć o inteligentne wyszukiwanie
+        alternatives = {
+            'gpt-4': ['claude-3', 'llama3.2-3b'],
+            'claude-3': ['llama3.2-3b', 'mistral:7b'],
+            'gpt-3.5-turbo': ['llama3.2-3b']
+        }
+        
+        return alternatives.get(expensive_model, ['llama3.2-3b'])
+
+class ActiveMetricsAnalyzer:
+    """
+    Główna klasa Active Metrics Analyzer - real-time Kaizen analytics
+    """
+    
+    def __init__(self, tracker: Optional[SimpleTracker] = None):
+        self.tracker = tracker or SimpleTracker()
+        self.threshold_monitor = ThresholdMonitor()
+        self.trend_analyzer = TrendAnalyzer()
+        self.cost_optimizer = CostOptimizer(self.tracker)
+        self.logger = self._setup_logging()
+        
+        # Cache dla wydajności
+        self._metrics_cache = {}
+        self._cache_timestamp = datetime.now()
+        self._cache_duration = timedelta(minutes=5)
+    
+    def _setup_logging(self) -> logging.Logger:
+        """Konfiguracja logowania"""
+        logger = logging.getLogger('active_metrics')
+        logger.setLevel(logging.INFO)
+        
+        if not logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        
+        return logger
+    
+    def analyze_task_completion(self, task_id: str, model_used: str, cost_usd: float, latency_ms: int) -> List[Alert]:
+        """
+        Analizuje zakończone zadanie i generuje alerty w czasie rzeczywistym
+        
+        Args:
+            task_id: ID zadania
+            model_used: Użyty model
+            cost_usd: Koszt zadania
+            latency_ms: Latencja zadania
+        
+        Returns:
+            Lista alertów do natychmiastowego działania
+        """
+        
+        alerts = []
+        
+        # Sprawdź progi dla tego konkretnego zadania
+        task_metrics = {
+            'cost_per_task': cost_usd,
+            'latency_ms': latency_ms
+        }
+        
+        threshold_alerts = self.threshold_monitor.check_thresholds(task_metrics)
+        alerts.extend(threshold_alerts)
+        
+        # Dodaj informacje o modelu i zadaniu
+        for alert in threshold_alerts:
+            alert.affected_model = model_used
+        
+        # Check for cost spikes
+        if self._is_cost_spike(model_used, cost_usd):
+            alerts.append(Alert(
+                alert_type=AlertType.COST_SPIKE,
+                severity=AlertSeverity.WARNING,
+                message=f"Wykryto skok kosztów dla {model_used}: ${cost_usd:.4f}",
+                affected_model=model_used,
+                metric_value=cost_usd,
+                suggestion=f"Sprawdź dlaczego {model_used} generuje wyższe koszty niż zwykle"
+            ))
+        
+        # Log alerts
+        for alert in alerts:
+            self.logger.warning(f"Alert: {alert.message}")
+        
+        return alerts
+    
+    def _is_cost_spike(self, model_name: str, current_cost: float) -> bool:
+        """Sprawdza czy koszt jest nietypowo wysoki dla tego modelu"""
+        
+        try:
+            cursor = self.tracker.conn.execute('''
+                SELECT AVG(cost_usd) as avg_cost, COUNT(*) as count
+                FROM tasks 
+                WHERE model_used = ? 
+                AND timestamp >= datetime('now', '-7 days')
+                AND cost_usd > 0
+            ''', (model_name,))
+            
+            result = cursor.fetchone()
+            
+            if result and result[1] >= 5:  # Min 5 samples
+                avg_cost = result[0]
+                # Spike if current cost is 3x average
+                return current_cost > avg_cost * 3
+        
+        except Exception as e:
+            self.logger.warning(f"Error checking cost spike: {e}")
+        
+        return False
+    
+    def generate_daily_kaizen_report(self, date: Optional[datetime] = None) -> KaizenReport:
+        """
+        Generuje dzienny raport Kaizen z insights i action items
+        
+        Args:
+            date: Data raportu (domyślnie dzisiaj)
+        
+        Returns:
+            KaizenReport z kompletną analizą
+        """
         
         if date is None:
             date = datetime.now()
         
-        # Get statistics for the day
-        stats = self.success_classifier.get_success_statistics(days=1)
+        self.logger.info(f"Generating Kaizen report for {date.date()}")
         
-        # Calculate key metrics
-        report = {
-            'report_date': date.strftime('%Y-%m-%d'),
-            'report_type': 'daily_kaizen',
-            'generated_at': datetime.now().isoformat(),
-            
-            # Daily summary
-            'daily_summary': {
-                'total_evaluations': stats['total_evaluations'],
-                'average_success_score': stats['average_score'],
-                'success_rate': stats['success_rate'],
-                'failure_rate': stats['failure_rate']
-            },
-            
-            # Performance insights
-            'performance_insights': self._generate_performance_insights(stats),
-            
-            # Learning indicators
-            'learning_indicators': {
-                'evaluation_count': stats['total_evaluations'],
-                'data_quality': 'good' if stats['total_evaluations'] > 5 else 'limited',
-                'confidence_level': min(1.0, stats['total_evaluations'] / 20)
-            },
-            
-            # Improvement areas
-            'improvement_areas': self._identify_improvement_areas(stats),
-            
-            # Tomorrow's focus
-            'tomorrow_focus': self._suggest_tomorrow_focus(stats)
-        }
+        # Pobierz metryki dnia
+        daily_metrics = self._get_daily_metrics(date)
+        
+        # Sprawdź alerty
+        alerts = self._get_daily_alerts(date)
+        
+        # Analiza trendów
+        trends = self._analyze_daily_trends(date)
+        
+        # Optymalizacje kosztów
+        optimizations = self.cost_optimizer.find_cost_optimizations(days=1)
+        
+        # Generuj insights
+        key_insights = self._generate_key_insights(daily_metrics, trends, alerts)
+        
+        # Generuj action items
+        action_items = self._generate_action_items(alerts, optimizations, trends)
+        
+        report = KaizenReport(
+            report_date=date,
+            total_tasks=daily_metrics.get('total_tasks', 0),
+            total_cost=daily_metrics.get('total_cost', 0.0),
+            avg_quality=daily_metrics.get('avg_quality', 0.0),
+            alerts=alerts,
+            trends=trends,
+            optimizations=optimizations,
+            key_insights=key_insights,
+            action_items=action_items
+        )
         
         return report
     
-    def generate_weekly_report(self, week_end_date: Optional[datetime] = None) -> Dict[str, Any]:
-        """Generate weekly Kaizen report"""
+    def _get_daily_metrics(self, date: datetime) -> Dict[str, Any]:
+        """Pobiera metryki dla danego dnia"""
         
-        if week_end_date is None:
-            week_end_date = datetime.now()
+        try:
+            date_str = date.strftime('%Y-%m-%d')
+            
+            cursor = self.tracker.conn.execute('''
+                SELECT 
+                    COUNT(*) as total_tasks,
+                    SUM(cost_usd) as total_cost,
+                    AVG(cost_usd) as avg_cost,
+                    AVG(latency_ms) as avg_latency,
+                    AVG(f.rating) as avg_rating,
+                    COUNT(f.rating) as feedback_count
+                FROM tasks t
+                LEFT JOIN feedback f ON t.id = f.task_id
+                WHERE DATE(t.timestamp) = ?
+            ''', (date_str,))
+            
+            result = cursor.fetchone()
+            
+            if result:
+                return {
+                    'total_tasks': result[0] or 0,
+                    'total_cost': result[1] or 0.0,
+                    'avg_cost': result[2] or 0.0,
+                    'avg_latency': result[3] or 0,
+                    'avg_quality': result[4] or 0.0,
+                    'feedback_count': result[5] or 0
+                }
         
-        # Get weekly statistics
-        stats = self.success_classifier.get_success_statistics(days=7)
+        except Exception as e:
+            self.logger.error(f"Error getting daily metrics: {e}")
         
-        # Get previous week for comparison
-        prev_week_stats = self.success_classifier.get_success_statistics(days=14)  # Last 14 days
+        return {}
+    
+    def _get_daily_alerts(self, date: datetime) -> List[Alert]:
+        """Generuje alerty na podstawie danych dnia"""
         
-        report = {
-            'report_date': week_end_date.strftime('%Y-%m-%d'),
-            'report_type': 'weekly_kaizen',
-            'generated_at': datetime.now().isoformat(),
-            
-            # Weekly summary
-            'weekly_summary': {
-                'total_evaluations': stats['total_evaluations'],
-                'average_success_score': stats['average_score'],
-                'success_rate': stats['success_rate'],
-                'improvement_vs_previous': self._calculate_improvement(stats, prev_week_stats)
-            },
-            
-            # Trend analysis
-            'trends': self._analyze_weekly_trends(stats, prev_week_stats),
-            
-            # Success patterns
-            'success_patterns': self._identify_success_patterns(stats),
-            
-            # Failure analysis
-            'failure_analysis': {
-                'top_failure_categories': stats.get('top_failure_categories', {}),
-                'failure_trends': 'decreasing' if stats['failure_rate'] < prev_week_stats.get('failure_rate', 1) else 'stable'
-            },
-            
-            # Strategic recommendations
-            'strategic_recommendations': self._generate_strategic_recommendations(stats),
-            
-            # Next week priorities
-            'next_week_priorities': self._suggest_next_week_priorities(stats)
+        daily_metrics = self._get_daily_metrics(date)
+        
+        # Convert to format expected by threshold monitor
+        threshold_metrics = {
+            'cost_per_task': daily_metrics.get('avg_cost', 0.0),
+            'latency_ms': daily_metrics.get('avg_latency', 0),
+            'quality_rating': daily_metrics.get('avg_quality', 5.0)
         }
         
-        return report
+        alerts = self.threshold_monitor.check_thresholds(threshold_metrics)
+        
+        return alerts
     
-    def _generate_performance_insights(self, stats: Dict[str, Any]) -> List[str]:
-        """Generate performance insights from statistics"""
+    def _analyze_daily_trends(self, date: datetime) -> List[MetricTrend]:
+        """Analizuje trendy dla danego dnia vs poprzednie dni"""
+        
+        try:
+            # Pobierz dane z ostatnich 14 dni
+            cursor = self.tracker.conn.execute('''
+                SELECT 
+                    DATE(timestamp) as date,
+                    AVG(cost_usd) as avg_cost,
+                    AVG(latency_ms) as avg_latency,
+                    AVG(COALESCE(f.rating, 3)) as avg_rating
+                FROM tasks t
+                LEFT JOIN feedback f ON t.id = f.task_id
+                WHERE timestamp >= datetime('now', '-14 days')
+                GROUP BY DATE(timestamp)
+                ORDER BY date
+            ''')
+            
+            # Organizuj dane według metryk
+            historical_data = {
+                'avg_cost': [],
+                'avg_latency': [], 
+                'avg_rating': []
+            }
+            
+            for row in cursor.fetchall():
+                date_str, cost, latency, rating = row
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                
+                historical_data['avg_cost'].append((date_obj, cost or 0))
+                historical_data['avg_latency'].append((date_obj, latency or 0))
+                historical_data['avg_rating'].append((date_obj, rating or 3))
+            
+            trends = self.trend_analyzer.analyze_trends(historical_data)
+            return trends
+        
+        except Exception as e:
+            self.logger.error(f"Error analyzing daily trends: {e}")
+            return []
+    
+    def _generate_key_insights(self, daily_metrics: Dict, trends: List[MetricTrend], alerts: List[Alert]) -> List[str]:
+        """Generuje kluczowe insights z danych"""
         
         insights = []
         
-        if stats['success_rate'] > 0.8:
-            insights.append(f"Excellent performance with {stats['success_rate']:.1%} success rate")
-        elif stats['success_rate'] > 0.6:
-            insights.append(f"Good performance with room for improvement ({stats['success_rate']:.1%} success)")
-        else:
-            insights.append(f"Performance needs attention - only {stats['success_rate']:.1%} success rate")
+        # Insights z metryk
+        total_tasks = daily_metrics.get('total_tasks', 0)
+        if total_tasks > 0:
+            avg_cost = daily_metrics.get('avg_cost', 0)
+            insights.append(f"Wykonano {total_tasks} zadań ze średnim kosztem ${avg_cost:.4f}")
         
-        if stats['average_score'] > 0.8:
-            insights.append("High quality execution across all metrics")
-        elif stats['average_score'] < 0.6:
-            insights.append("Quality metrics below target - review processes")
+        # Insights z trendów
+        for trend in trends:
+            if trend.significance > 0.7:  # Significant trends only
+                direction_text = {
+                    TrendDirection.IMPROVING: "poprawił się",
+                    TrendDirection.DEGRADING: "pogorszył się", 
+                    TrendDirection.STABLE: "pozostał stabilny"
+                }
+                
+                insights.append(
+                    f"{trend.metric_name} {direction_text[trend.direction]} o {abs(trend.change_percent):.1f}%"
+                )
         
-        if stats['total_evaluations'] < 5:
-            insights.append("Limited data available - need more task completions for better insights")
+        # Insights z alertów
+        critical_alerts = [a for a in alerts if a.severity == AlertSeverity.CRITICAL]
+        if critical_alerts:
+            insights.append(f"🚨 {len(critical_alerts)} krytycznych alertów wymaga natychmiastowej uwagi")
+        
+        if not insights:
+            insights.append("System działa stabilnie bez znaczących problemów")
         
         return insights
     
-    def _identify_improvement_areas(self, stats: Dict[str, Any]) -> List[str]:
-        """Identify key improvement areas"""
+    def _generate_action_items(self, alerts: List[Alert], optimizations: List[CostOptimization], trends: List[MetricTrend]) -> List[str]:
+        """Generuje konkretne action items"""
         
-        areas = []
+        action_items = []
         
-        if stats['failure_rate'] > 0.2:
-            areas.append("Reduce task failure rate through better planning")
+        # Action items z alertów
+        critical_alerts = [a for a in alerts if a.severity == AlertSeverity.CRITICAL]
+        for alert in critical_alerts:
+            if alert.suggestion:
+                action_items.append(f"🚨 PILNE: {alert.suggestion}")
         
-        if stats.get('top_failure_categories'):
-            top_failure = list(stats['top_failure_categories'].keys())[0]
-            areas.append(f"Address {top_failure} failures - primary failure mode")
+        # Action items z optymalizacji
+        high_impact_optimizations = [o for o in optimizations if o.projected_savings > 0.01]
+        for opt in high_impact_optimizations[:3]:  # Top 3
+            action_items.append(f"💰 {opt.description} (oszczędności: ${opt.projected_savings:.3f})")
         
-        if stats['average_score'] < 0.7:
-            areas.append("Improve overall execution quality")
+        # Action items z trendów
+        degrading_trends = [t for t in trends if t.direction == TrendDirection.DEGRADING and t.significance > 0.6]
+        for trend in degrading_trends:
+            action_items.append(f"📉 Zbadaj pogorszenie w {trend.metric_name} ({trend.change_percent:.1f}%)")
         
-        if not areas:
-            areas.append("Maintain current performance levels")
+        if not action_items:
+            action_items.append("✅ Brak krytycznych akcji - system działa optymalnie")
         
-        return areas
+        return action_items
     
-    def _suggest_tomorrow_focus(self, stats: Dict[str, Any]) -> List[str]:
-        """Suggest focus areas for tomorrow"""
-        
-        focus_areas = []
-        
-        if stats['total_evaluations'] < 3:
-            focus_areas.append("Complete more tasks to gather performance data")
-        
-        if stats.get('top_failure_categories'):
-            top_category = list(stats['top_failure_categories'].keys())[0]
-            focus_areas.append(f"Prevent {top_category} failures in new tasks")
-        
-        if stats['success_rate'] > 0.8:
-            focus_areas.append("Maintain high performance while taking on more challenging tasks")
-        else:
-            focus_areas.append("Focus on quality over quantity until success rate improves")
-        
-        return focus_areas
-    
-    def _calculate_improvement(self, current: Dict[str, Any], 
-                             previous: Dict[str, Any]) -> Dict[str, Any]:
-        """Calculate improvement vs previous period"""
-        
-        if not previous or previous.get('total_evaluations', 0) == 0:
-            return {'status': 'no_comparison_data'}
-        
-        current_rate = current.get('success_rate', 0)
-        prev_rate = previous.get('success_rate', 0)
-        
-        improvement = {
-            'success_rate_change': current_rate - prev_rate,
-            'score_change': current.get('average_score', 0) - previous.get('average_score', 0),
-            'evaluation_count_change': current.get('total_evaluations', 0) - previous.get('total_evaluations', 0)
-        }
-        
-        # Overall assessment
-        if improvement['success_rate_change'] > 0.05:
-            improvement['overall'] = 'significant_improvement'
-        elif improvement['success_rate_change'] > 0.01:
-            improvement['overall'] = 'slight_improvement'
-        elif improvement['success_rate_change'] > -0.01:
-            improvement['overall'] = 'stable'
-        else:
-            improvement['overall'] = 'degradation'
-        
-        return improvement
-
-class ActiveMetricsAnalyzer:
-    """Main Active Metrics Analyzer system"""
-    
-    def __init__(self, 
-                 success_classifier_db: str = "success_classifier.db",
-                 metrics_db: str = "active_metrics.db"):
-        
-        self.success_classifier = SuccessClassifier(evaluation_db_path=success_classifier_db)
-        self.metrics_collector = MetricsCollector()
-        self.alert_manager = AlertManager()
-        self.cost_optimizer = CostOptimizationEngine()
-        self.kaizen_reporter = KaizenReporter(self.success_classifier)
-        
-        self.metrics_db_path = metrics_db
-        self.logger = logging.getLogger(__name__)
-        self._initialize_metrics_database()
-        
-        # Real-time monitoring state
-        self._monitoring_active = False
-        self._metric_history = defaultdict(deque)
-        self._max_history_size = 1000
-        
-        # Integration components
-        try:
-            self.tracker = SimpleTracker()
-        except:
-            self.tracker = None
-            self.logger.warning("Could not initialize SimpleTracker")
-    
-    def _initialize_metrics_database(self):
-        """Initialize metrics storage database"""
-        
-        with sqlite3.connect(self.metrics_db_path) as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS metric_snapshots (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    metric_name TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    value REAL NOT NULL,
-                    timestamp TIMESTAMP NOT NULL,
-                    context TEXT
-                )
-            """)
-            
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_metric_timestamp ON metric_snapshots(timestamp)
-            """)
-            
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_metric_entity ON metric_snapshots(entity_id, metric_name)
-            """)
-            
-            conn.commit()
-    
-    async def start_monitoring(self):
-        """Start real-time metrics monitoring"""
-        
-        if self._monitoring_active:
-            return
-        
-        self._monitoring_active = True
-        
-        # Register default collectors
-        self._register_default_collectors()
-        
-        # Start metric collection
-        collection_task = asyncio.create_task(
-            self.metrics_collector.start_collection(self._process_metric_snapshot)
-        )
-        
-        # Start alert checking
-        alert_task = asyncio.create_task(self._run_alert_checks())
-        
-        # Start scheduled reports
-        report_task = asyncio.create_task(self._run_scheduled_reports())
-        
-        self.logger.info("Started Active Metrics Analyzer monitoring")
+    def get_cost_analysis(self, days: int = 7) -> Dict:
+        """Zwraca analizę kosztów z sugestiami optymalizacji"""
         
         try:
-            await asyncio.gather(collection_task, alert_task, report_task)
-        except asyncio.CancelledError:
-            self.logger.info("Monitoring cancelled")
-        finally:
-            self._monitoring_active = False
-    
-    def stop_monitoring(self):
-        """Stop metrics monitoring"""
-        self._monitoring_active = False
-        self.metrics_collector.stop_collection()
-    
-    def _register_default_collectors(self):
-        """Register default metric collectors"""
-        
-        # SimpleTracker metrics
-        if self.tracker:
-            def collect_tracker_metrics():
-                try:
-                    daily_stats = self.tracker.get_daily_stats()
-                    return {
-                        'total_tasks': daily_stats.get_total_tasks(),
-                        'avg_rating': daily_stats.get_avg_rating(),
-                        'completion_rate': 0.85  # Mock for now
-                    }
-                except:
-                    return {}
+            # Całkowite koszty
+            cursor = self.tracker.conn.execute('''
+                SELECT 
+                    SUM(cost_usd) as total_cost,
+                    AVG(cost_usd) as avg_cost,
+                    COUNT(*) as total_tasks
+                FROM tasks 
+                WHERE timestamp >= datetime('now', '-{} days')
+                AND cost_usd > 0
+            '''.format(days))
             
-            self.metrics_collector.register_collector('simple_tracker', collect_tracker_metrics)
-        
-        # System metrics
-        def collect_system_metrics():
+            result = cursor.fetchone()
+            total_cost, avg_cost, total_tasks = result or (0, 0, 0)
+            
+            # Koszty per model
+            cursor = self.tracker.conn.execute('''
+                SELECT 
+                    model_used,
+                    SUM(cost_usd) as model_cost,
+                    COUNT(*) as model_tasks,
+                    AVG(cost_usd) as avg_model_cost
+                FROM tasks 
+                WHERE timestamp >= datetime('now', '-{} days')
+                AND cost_usd > 0
+                GROUP BY model_used
+                ORDER BY model_cost DESC
+            '''.format(days))
+            
+            model_costs = {}
+            for row in cursor.fetchall():
+                model, cost, tasks, avg_cost = row
+                model_costs[model] = {
+                    'total_cost': cost,
+                    'tasks': tasks,
+                    'avg_cost': avg_cost,
+                    'percentage': (cost / total_cost * 100) if total_cost > 0 else 0
+                }
+            
+            # Znajdź optymalizacje
+            optimizations = self.cost_optimizer.find_cost_optimizations(days)
+            total_savings = sum(opt.projected_savings for opt in optimizations)
+            
             return {
-                'memory_usage': 0.6,  # Mock - would get real system metrics
-                'cpu_usage': 0.4,
-                'active_connections': 5,
-                'response_time': 0.8
+                'period_days': days,
+                'total_cost': total_cost or 0,
+                'avg_cost_per_task': avg_cost or 0,
+                'total_tasks': total_tasks or 0,
+                'model_breakdown': model_costs,
+                'optimization_opportunities': len(optimizations),
+                'projected_savings': total_savings,
+                'savings_percentage': (total_savings / total_cost * 100) if total_cost > 0 else 0,
+                'top_optimizations': optimizations[:5]  # Top 5
             }
         
-        self.metrics_collector.register_collector('system', collect_system_metrics)
-    
-    async def _process_metric_snapshot(self, snapshot: MetricSnapshot):
-        """Process incoming metric snapshot"""
-        
-        # Store in database
-        self._store_metric_snapshot(snapshot)
-        
-        # Update in-memory history
-        history_key = f"{snapshot.entity_id}_{snapshot.metric_name}"
-        history = self._metric_history[history_key]
-        
-        history.append(snapshot)
-        if len(history) > self._max_history_size:
-            history.popleft()
-        
-        # Check for alerts
-        historical_data = list(history)
-        alerts = self.alert_manager.check_metric_for_alerts(snapshot, historical_data)
-        
-        # Process alerts
-        for alert in alerts:
-            self.alert_manager.store_alert(alert)
-            
-            # Log critical alerts immediately
-            if alert.severity in [AlertSeverity.CRITICAL, AlertSeverity.EMERGENCY]:
-                self.logger.critical(f"ALERT: {alert.title} - {alert.description}")
-    
-    def _store_metric_snapshot(self, snapshot: MetricSnapshot):
-        """Store metric snapshot in database"""
-        
-        with sqlite3.connect(self.metrics_db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO metric_snapshots
-                (metric_name, entity_id, entity_type, value, timestamp, context)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                snapshot.metric_name,
-                snapshot.entity_id, 
-                snapshot.entity_type,
-                snapshot.value,
-                snapshot.timestamp.isoformat(),
-                json.dumps(snapshot.context)
-            ))
-            conn.commit()
-    
-    async def _run_alert_checks(self):
-        """Run periodic alert checks"""
-        
-        while self._monitoring_active:
-            try:
-                # Check for system-wide anomalies
-                await self._check_system_alerts()
-                
-                # Clean up resolved alerts
-                self._cleanup_old_alerts()
-                
-                await asyncio.sleep(300)  # Check every 5 minutes
-            
-            except Exception as e:
-                self.logger.error(f"Error in alert checking: {e}")
-                await asyncio.sleep(60)
-    
-    async def _check_system_alerts(self):
-        """Check for system-wide alerts"""
-        
-        # Check for too many active alerts
-        active_count = len([a for a in self._active_alerts.values() if not a.resolved])
-        
-        if active_count > 10:
-            system_alert = Alert(
-                alert_id=f"system_alert_{int(time.time())}",
-                alert_type=AlertType.PERFORMANCE_ANOMALY,
-                severity=AlertSeverity.WARNING,
-                title="High Alert Volume",
-                description=f"System has {active_count} active alerts - may indicate systemic issues",
-                entity_id="system",
-                entity_type="system",
-                metric_name="alert_count",
-                current_value=active_count,
-                threshold_value=10,
-                recommendations=[
-                    "Review alert rules for false positives",
-                    "Investigate common root causes",
-                    "Consider system-wide improvements"
-                ]
-            )
-            self.alert_manager.store_alert(system_alert)
-    
-    def _cleanup_old_alerts(self):
-        """Clean up old resolved alerts"""
-        
-        cutoff_date = datetime.now() - timedelta(days=7)
-        
-        with sqlite3.connect(self.alert_manager.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                DELETE FROM alerts 
-                WHERE resolved = TRUE AND resolved_at < ?
-            """, (cutoff_date.isoformat(),))
-            conn.commit()
-    
-    async def _run_scheduled_reports(self):
-        """Run scheduled report generation"""
-        
-        # Daily report at 23:00
-        schedule.every().day.at("23:00").do(self._generate_daily_report_job)
-        
-        # Weekly report on Sunday at 23:30  
-        schedule.every().sunday.at("23:30").do(self._generate_weekly_report_job)
-        
-        while self._monitoring_active:
-            try:
-                schedule.run_pending()
-                await asyncio.sleep(60)  # Check every minute
-            except Exception as e:
-                self.logger.error(f"Error in scheduled reports: {e}")
-                await asyncio.sleep(300)
-    
-    def _generate_daily_report_job(self):
-        """Job wrapper for daily report generation"""
-        try:
-            report = self.kaizen_reporter.generate_daily_report()
-            self._save_report(report)
-            
-            if self.tracker:
-                self.tracker.track_event({
-                    'type': 'daily_report_generated',
-                    'evaluations_count': report['daily_summary']['total_evaluations'],
-                    'success_rate': report['daily_summary']['success_rate']
-                })
         except Exception as e:
-            self.logger.error(f"Error generating daily report: {e}")
-    
-    def _generate_weekly_report_job(self):
-        """Job wrapper for weekly report generation"""
-        try:
-            report = self.kaizen_reporter.generate_weekly_report()
-            self._save_report(report)
-            
-            if self.tracker:
-                self.tracker.track_event({
-                    'type': 'weekly_report_generated',
-                    'evaluations_count': report['weekly_summary']['total_evaluations'],
-                    'success_rate': report['weekly_summary']['success_rate']
-                })
-        except Exception as e:
-            self.logger.error(f"Error generating weekly report: {e}")
-    
-    def _save_report(self, report: Dict[str, Any]):
-        """Save report to file system"""
-        
-        reports_dir = Path("reports")
-        reports_dir.mkdir(exist_ok=True)
-        
-        report_type = report['report_type']
-        report_date = report['report_date']
-        filename = f"{report_type}_{report_date}.json"
-        
-        filepath = reports_dir / filename
-        
-        with open(filepath, 'w') as f:
-            json.dump(report, f, indent=2, default=str)
-        
-        self.logger.info(f"Saved {report_type} report to {filepath}")
-    
-    def get_current_system_status(self) -> Dict[str, Any]:
-        """Get current comprehensive system status"""
-        
-        # Active alerts
-        active_alerts = [a for a in self.alert_manager._active_alerts.values() if not a.resolved]
-        critical_alerts = [a for a in active_alerts if a.severity == AlertSeverity.CRITICAL]
-        
-        # Recent metrics
-        recent_metrics = {}
-        for key, history in self._metric_history.items():
-            if history:
-                recent_metrics[key] = history[-1].value
-        
-        return {
-            'monitoring_active': self._monitoring_active,
-            'total_active_alerts': len(active_alerts),
-            'critical_alerts': len(critical_alerts),
-            'metric_sources': len(self.metrics_collector._collectors),
-            'recent_metrics': recent_metrics,
-            'system_health': 'healthy' if len(critical_alerts) == 0 else 'degraded'
-        }
-    
-    # CLI Command Methods
-    def generate_kaizen_report_cli(self, report_type: str = 'daily') -> str:
-        """CLI command: a0 kaizen-report"""
-        
-        if report_type == 'daily':
-            report = self.kaizen_reporter.generate_daily_report()
-        elif report_type == 'weekly':
-            report = self.kaizen_reporter.generate_weekly_report()
-        else:
-            return f"Error: Unknown report type '{report_type}'. Use 'daily' or 'weekly'"
-        
-        # Format report for CLI display
-        output = []
-        output.append(f"🎯 Agent Zero V1 - {report_type.title()} Kaizen Report")
-        output.append("=" * 60)
-        output.append(f"Generated: {report['generated_at']}")
-        
-        if report_type == 'daily':
-            summary = report['daily_summary']
-            output.append(f"\n📊 Daily Summary ({report['report_date']}):")
-            output.append(f"   Evaluations: {summary['total_evaluations']}")
-            output.append(f"   Success Rate: {summary['success_rate']:.1%}")
-            output.append(f"   Avg Score: {summary['average_success_score']:.1%}")
-            
-            if report.get('performance_insights'):
-                output.append(f"\n💡 Key Insights:")
-                for insight in report['performance_insights'][:3]:
-                    output.append(f"   • {insight}")
-            
-            if report.get('improvement_areas'):
-                output.append(f"\n🎯 Improvement Areas:")
-                for area in report['improvement_areas'][:3]:
-                    output.append(f"   • {area}")
-        
-        return "\n".join(output)
-    
-    def generate_cost_analysis_cli(self, days: int = 7) -> str:
-        """CLI command: a0 cost-analysis"""
-        
-        # Get cost history
-        with sqlite3.connect(self.metrics_db_path) as conn:
-            cursor = conn.cursor()
-            
-            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
-            
-            cursor.execute("""
-                SELECT metric_name, entity_id, value, timestamp
-                FROM metric_snapshots
-                WHERE metric_name LIKE '%cost%' AND timestamp > ?
-                ORDER BY timestamp
-            """, (cutoff_date,))
-            
-            cost_snapshots = []
-            for row in cursor.fetchall():
-                snapshot = MetricSnapshot(
-                    metric_name=row[0],
-                    entity_id=row[1],
-                    entity_type="unknown",  # Not stored in this simple version
-                    value=row[2],
-                    timestamp=datetime.fromisoformat(row[3])
-                )
-                cost_snapshots.append(snapshot)
-        
-        if not cost_snapshots:
-            return "📊 No cost data available for analysis"
-        
-        # Analyze costs
-        cost_analysis = self.cost_optimizer.analyze_cost_trends(cost_snapshots, days)
-        
-        if cost_analysis.get('status') == 'insufficient_data':
-            return f"📊 Insufficient cost data (need at least 7 days)"
-        
-        # Format output
-        output = []
-        output.append(f"💰 Agent Zero V1 - Cost Analysis ({days} days)")
-        output.append("=" * 50)
-        output.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-        
-        output.append(f"\n📈 Cost Trends:")
-        output.append(f"   Current Daily Cost: ${cost_analysis['current_daily_cost']:.4f}")
-        output.append(f"   Trend: {cost_analysis['trend_direction']}")
-        output.append(f"   Daily Change: ${cost_analysis['daily_change']:.4f}")
-        output.append(f"   Period Total: ${cost_analysis['total_period_cost']:.4f}")
-        
-        output.append(f"\n🔮 Projections:")
-        output.append(f"   7-day projection: ${cost_analysis['projected_cost_7d']:.4f}")
-        output.append(f"   30-day projection: ${cost_analysis['projected_cost_30d']:.4f}")
-        
-        if cost_analysis.get('optimization_suggestions'):
-            output.append(f"\n💡 Optimization Suggestions:")
-            for suggestion in cost_analysis['optimization_suggestions'][:3]:
-                output.append(f"   • {suggestion.title}")
-                output.append(f"     Impact: {suggestion.expected_impact}")
-                output.append(f"     Priority: {suggestion.priority}/10")
-        
-        return "\n".join(output)
+            self.logger.error(f"Error getting cost analysis: {e}")
+            return {'error': str(e)}
 
-# CLI interface for testing
-async def main():
-    """CLI interface for testing Active Metrics Analyzer"""
+# === CLI Integration Functions ===
+
+def generate_kaizen_report_cli(format: str = "summary") -> Dict:
+    """
+    CLI wrapper for Kaizen report generation
+    
+    Usage:
+        report = generate_kaizen_report_cli("detailed")
+        console.print(report['summary'])
+    
+    Args:
+        format: "summary" lub "detailed"
+    """
+    
+    analyzer = ActiveMetricsAnalyzer()
+    report = analyzer.generate_daily_kaizen_report()
+    
+    if format == "summary":
+        return {
+            'date': report.report_date.strftime('%Y-%m-%d'),
+            'summary': f"📊 {report.total_tasks} zadań, ${report.total_cost:.4f} koszt, {len(report.alerts)} alertów",
+            'key_insights': report.key_insights[:3],
+            'top_actions': report.action_items[:3],
+            'alerts_count': len(report.alerts),
+            'critical_alerts': len([a for a in report.alerts if a.severity == AlertSeverity.CRITICAL])
+        }
+    else:
+        return {
+            'date': report.report_date.strftime('%Y-%m-%d'),
+            'total_tasks': report.total_tasks,
+            'total_cost': report.total_cost,
+            'avg_quality': report.avg_quality,
+            'alerts': [{'type': a.alert_type.value, 'severity': a.severity.value, 'message': a.message} for a in report.alerts],
+            'insights': report.key_insights,
+            'action_items': report.action_items,
+            'optimizations': [{'description': o.description, 'savings': o.projected_savings} for o in report.optimizations]
+        }
+
+def get_cost_analysis_cli(days: int = 7) -> Dict:
+    """
+    CLI wrapper for cost analysis
+    
+    Usage:
+        analysis = get_cost_analysis_cli(7)
+        console.print(f"Total cost: ${analysis['total_cost']:.4f}")
+    """
+    
+    analyzer = ActiveMetricsAnalyzer()
+    return analyzer.get_cost_analysis(days)
+
+def check_real_time_alerts_cli(task_id: str, model: str, cost: float, latency: int) -> List[Dict]:
+    """
+    CLI wrapper for real-time alerts
+    
+    Usage:
+        alerts = check_real_time_alerts_cli(task_id, "gpt-4", 0.05, 8000)
+        for alert in alerts:
+            console.print(f"⚠️ {alert['message']}")  
+    """
+    
+    analyzer = ActiveMetricsAnalyzer()
+    alerts = analyzer.analyze_task_completion(task_id, model, cost, latency)
+    
+    return [
+        {
+            'type': alert.alert_type.value,
+            'severity': alert.severity.value,
+            'message': alert.message,
+            'suggestion': alert.suggestion
+        } for alert in alerts
+    ]
+
+# === Testing Functions ===
+
+def test_active_metrics_analyzer():
+    """Testy funkcjonalne dla active metrics analyzer"""
+    
+    print("=== TESTING ACTIVE METRICS ANALYZER ===\n")
     
     analyzer = ActiveMetricsAnalyzer()
     
-    print("📊 Agent Zero V1 - Active Metrics Analyzer")
-    print("=" * 60)
-    
-    # Test CLI commands
-    print(f"\n🎯 Testing CLI Commands:")
-    
-    # Test kaizen report
-    print(f"\n1. Kaizen Report (Daily):")
-    daily_report = analyzer.generate_kaizen_report_cli('daily')
-    print(daily_report)
-    
-    # Test cost analysis
-    print(f"\n2. Cost Analysis:")
-    cost_analysis = analyzer.generate_cost_analysis_cli(7)
-    print(cost_analysis)
-    
-    # Test system status
-    print(f"\n📊 System Status:")
-    status = analyzer.get_current_system_status()
-    print(f"   Monitoring: {'Active' if status['monitoring_active'] else 'Inactive'}")
-    print(f"   Active Alerts: {status['total_active_alerts']}")
-    print(f"   Critical Alerts: {status['critical_alerts']}")
-    print(f"   Metric Sources: {status['metric_sources']}")
-    print(f"   System Health: {status['system_health']}")
-    
-    # Show recent metrics if available
-    if status['recent_metrics']:
-        print(f"\n📈 Recent Metrics:")
-        for key, value in list(status['recent_metrics'].items())[:5]:
-            print(f"   {key}: {value:.3f}")
-    
-    # Test monitoring (brief demo)
-    print(f"\n🔄 Starting brief monitoring demo...")
-    
-    # Start monitoring for 10 seconds
-    monitoring_task = asyncio.create_task(analyzer.start_monitoring())
-    
-    # Let it run for a short time
-    await asyncio.sleep(5)
-    
-    # Stop monitoring
-    analyzer.stop_monitoring()
-    
-    # Cancel monitoring task
-    monitoring_task.cancel()
-    
-    try:
-        await monitoring_task
-    except asyncio.CancelledError:
-        pass
-    
-    print(f"✅ Monitoring demo completed")
-    
-    print(f"\n✅ Active Metrics Analyzer test completed!")
-
-if __name__ == "__main__":
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # Test 1: Real-time alert checking
+    print("Test 1: Real-time alert checking")
+    alerts = analyzer.analyze_task_completion(
+        task_id="test-1",
+        model_used="gpt-4", 
+        cost_usd=0.08,  # High cost
+        latency_ms=9000  # High latency
     )
     
-    asyncio.run(main())
+    print(f"Generated {len(alerts)} alerts:")
+    for alert in alerts:
+        print(f"  - {alert.severity.value}: {alert.message}")
+    print()
+    
+    # Test 2: Daily Kaizen report
+    print("Test 2: Daily Kaizen report generation")
+    report = analyzer.generate_daily_kaizen_report()
+    
+    print(f"Report for {report.report_date.date()}:")
+    print(f"  - Total tasks: {report.total_tasks}")
+    print(f"  - Total cost: ${report.total_cost:.4f}")
+    print(f"  - Alerts: {len(report.alerts)}")
+    print(f"  - Key insights: {report.key_insights}")
+    print(f"  - Action items: {report.action_items}")
+    print()
+    
+    # Test 3: Cost analysis
+    print("Test 3: Cost analysis")
+    cost_analysis = analyzer.get_cost_analysis(days=7)
+    
+    print(f"Cost Analysis (7 days):")
+    print(f"  - Total cost: ${cost_analysis.get('total_cost', 0):.4f}")
+    print(f"  - Avg per task: ${cost_analysis.get('avg_cost_per_task', 0):.4f}")
+    print(f"  - Optimization opportunities: {cost_analysis.get('optimization_opportunities', 0)}")
+    print(f"  - Projected savings: ${cost_analysis.get('projected_savings', 0):.4f}")
+    print()
+    
+    # Test 4: CLI Integration
+    print("Test 4: CLI Integration Functions")
+    
+    cli_report = generate_kaizen_report_cli("summary")
+    print(f"CLI Report Summary: {cli_report}")
+    
+    cli_cost = get_cost_analysis_cli(7)
+    print(f"CLI Cost Analysis: Total ${cli_cost.get('total_cost', 0):.4f}")
+    
+    cli_alerts = check_real_time_alerts_cli("test-cli", "expensive-model", 0.1, 10000)
+    print(f"CLI Alerts: {len(cli_alerts)} alerts generated")
+    
+    print("\n=== ALL TESTS COMPLETED ===")
+
+if __name__ == "__main__":
+    test_active_metrics_analyzer()
