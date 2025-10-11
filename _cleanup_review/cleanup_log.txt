@@ -1,0 +1,32 @@
+# Agent Zero V1 - Cleanup Report
+Generated: 2025-10-11 15:25:29.726257
+==================================================
+
+Total files to review: 19
+
+## BACKUP_FILES (5 files):
+  - docker-compose.yml.backup (5.3KB, 2025-10-10 12:10)
+  - test_full_integration.py.backup (19.1KB, 2025-10-07 21:00)
+  - agent-zero-v1.backup (3.7KB, 2025-10-09 09:58)
+  - docker-compose.yml.bak_20251010_121942 (5.3KB, 2025-10-10 12:19)
+  - docker-compose.yml.bak_20251010_122934 (5.3KB, 2025-10-10 12:29)
+
+## OLD_CONFIGS (5 files):
+  - docker-compose-phase1-backup.yml (2.2KB, 2025-10-11 09:56)
+  - docker-compose-v2-production.yml (9.4KB, 2025-10-11 09:27)
+  - docker-compose-fixed.yml (3.4KB, 2025-10-10 14:02)
+  - docker-compose.dev.yml (0.0KB, 2025-10-09 08:51)
+  - docker-compose.neo4j.yml (0.6KB, 2025-10-09 08:51)
+
+## TEMP_FILES (6 files):
+  - create_integration_test_fixed.py (7.5KB, 2025-10-09 08:51)
+  - create_integration_test_fixed.py (7.5KB, 2025-10-09 08:51)
+  - task_decomposer_fixed.py (12.6KB, 2025-10-09 08:51)
+  - websocket_monitor_fixed.py (19.0KB, 2025-10-09 08:51)
+  - test_business_parser_fixed.py (15.1KB, 2025-10-09 22:55)
+  - interactive_ai_system_fixed.py (19.8KB, 2025-10-11 14:40)
+
+## DATABASE_FILES (3 files):
+  - agent_zero.db (268.0KB, 2025-10-10 22:20)
+  - project_orchestrator_standalone.db (12.0KB, 2025-10-10 16:02)
+  - agent_zero_learning.db (12.0KB, 2025-10-11 08:15)

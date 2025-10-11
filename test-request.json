@@ -1,0 +1,9 @@
+{
+  "task_description": "Create enterprise AI platform with real-time analytics",
+  "context": {
+    "complexity": "high",
+    "tech_stack": ["Python", "FastAPI", "Neo4j"],
+    "team_size": 2,
+    "timeline_days": 60
+  }
+}

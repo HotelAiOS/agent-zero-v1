@@ -104,46 +104,6 @@ volumes:
   rabbitmq_data:
   ai_intelligence_data:
 
-  # =============================================================================
-  # PHASE 2 AI INTELLIGENCE LAYER WITH NLP ENHANCEMENT
-  # =============================================================================
-  
-  ai-intelligence-v2-nlp:
-    build: 
-      context: ./services/ai-intelligence-v2-nlp
-      dockerfile: Dockerfile
-    container_name: agent-zero-ai-intelligence-v2-nlp
-    environment:
-      - LOG_LEVEL=INFO
-      - ENABLE_ADVANCED_NLP=true
-      - NLP_FALLBACK_MODE=true
-      - PORT=8011
-    ports:
-      - "8011:8010"  # Phase 2 on different port to avoid conflicts
-    volumes:
-      - ai_intelligence_v2_data:/app/data
-      - ai_intelligence_v2_models:/app/models
-    networks:
-      - agent-zero-network
-    depends_on:
-      neo4j:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
-
-volumes:
   # Phase 2 specific volumes
   ai_intelligence_v2_data:
   ai_intelligence_v2_models:
