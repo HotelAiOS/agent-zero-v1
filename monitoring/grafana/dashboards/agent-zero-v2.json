@@ -1,0 +1,19 @@
+{
+  "dashboard": {
+    "title": "Agent Zero V2.0 Intelligence Layer",
+    "panels": [
+      {
+        "title": "AI Intelligence Performance",
+        "type": "graph"
+      },
+      {
+        "title": "Request Processing Time", 
+        "type": "graph"
+      },
+      {
+        "title": "System Health Overview",
+        "type": "stat"
+      }
+    ]
+  }
+}

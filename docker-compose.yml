@@ -1,14 +1,17 @@
+version: '3.8'
+
+networks:
+  agent-zero-network:
+    driver: bridge
+
 services:
-  # Infrastructure Services
   neo4j:
     image: neo4j:5.13
     container_name: agent-zero-neo4j
     environment:
-      - NEO4J_AUTH=neo4j/password123
-      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/agent-pass
       - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_server_memory_heap_initial__size=256m
-      - NEO4J_server_memory_heap_max__size=512m
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -16,7 +19,11 @@ services:
       - neo4j_data:/data
     networks:
       - agent-zero-network
-    # REMOVED problematic healthcheck - Neo4j works without it
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "agent-pass", "RETURN 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -27,18 +34,13 @@ services:
       - redis_data:/data
     networks:
       - agent-zero-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   rabbitmq:
     image: rabbitmq:3.12-management
     container_name: agent-zero-rabbitmq
     environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=SecureRabbitPass123
+      - RABBITMQ_DEFAULT_USER=agent
+      - RABBITMQ_DEFAULT_PASS=zero123
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -46,99 +48,58 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - agent-zero-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Application Services - SIMPLIFIED DEPENDENCIES
+  ai-intelligence:
+    build: ./services/ai-intelligence
+    container_name: agent-zero-ai-intelligence-v2
+    environment:
+      - LOG_LEVEL=INFO
+    ports:
+      - "8010:8010"
+    volumes:
+      - ai_intelligence_data:/app/data
+    networks:
+      - agent-zero-network
+    depends_on:
+      - neo4j
+      - redis
+
   api-gateway:
-    build: 
-      context: ./services/api-gateway
-      dockerfile: Dockerfile
+    build: ./services/api-gateway
     container_name: agent-zero-api-gateway
     environment:
       - LOG_LEVEL=INFO
-      - TRACKER_DB_PATH=/app/data/agent_zero.db
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=password123
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://admin:SecureRabbitPass123@rabbitmq:5672/
+      - AI_INTELLIGENCE_URL=http://ai-intelligence:8010
     ports:
       - "8000:8080"
-    volumes:
-      - ./:/app/project
-      - api_gateway_data:/app/data
     networks:
       - agent-zero-network
     depends_on:
-      - neo4j
-      - redis
-      - rabbitmq
-    restart: unless-stopped
+      - ai-intelligence
 
   websocket-service:
-    build:
-      context: ./services/chat-service
-      dockerfile: Dockerfile
+    build: ./services/websocket-service
     container_name: agent-zero-websocket
     environment:
       - LOG_LEVEL=INFO
-      - TRACKER_DB_PATH=/app/data/agent_zero.db
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=password123
     ports:
       - "8001:8001"
-    volumes:
-      - ./:/app/project
-      - websocket_data:/app/data
     networks:
       - agent-zero-network
-    depends_on:
-      - neo4j
-      - redis
-    restart: unless-stopped
 
   agent-orchestrator:
-    build:
-      context: ./services/agent-orchestrator
-      dockerfile: Dockerfile
+    build: ./services/agent-orchestrator
     container_name: agent-zero-orchestrator
     environment:
       - LOG_LEVEL=INFO
-      - TRACKER_DB_PATH=/app/data/agent_zero.db
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=password123
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://admin:SecureRabbitPass123@rabbitmq:5672/
     ports:
       - "8002:8002"
-    volumes:
-      - ./:/app/project
-      - orchestrator_data:/app/data
     networks:
       - agent-zero-network
-    depends_on:
-      - neo4j
-      - redis
-      - rabbitmq
-    restart: unless-stopped
 
+# SINGLE VOLUMES SECTION - BUG FIXED
 volumes:
   neo4j_data:
   redis_data:
   rabbitmq_data:
-  api_gateway_data:
-  websocket_data:
-  orchestrator_data:
-
-networks:
-  agent-zero-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
+  ai_intelligence_data:
