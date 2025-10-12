@@ -32,7 +32,7 @@ from fastapi.responses import JSONResponse
 from fastapi.websockets import WebSocketDisconnect
 import redis.asyncio as redis
 import aiohttp
-from neo4j import AsyncGraphDatabase
+from neo4j import GraphDatabase
 import pika
 from pydantic import BaseModel, Field, validator
 
@@ -207,7 +207,7 @@ class DatabaseManager:
     async def connect(self):
         """Connect to Neo4j"""
         try:
-            self.driver = AsyncGraphDatabase.driver(
+            self.driver = GraphDatabase.driver(
                 config.NEO4J_URI,
                 auth=(config.NEO4J_USER, config.NEO4J_PASSWORD)
             )
@@ -1098,7 +1098,7 @@ if __name__ == "__main__":
     uvicorn_config = {
         "app": "integrated-system-production:app",
         "host": config.HOST,
-        "port": config.PORT,
+        "port": 9010,
         "log_level": "info",
         "access_log": True,
         "reload": config.DEBUG,

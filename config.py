@@ -292,3 +292,5 @@ __all__ = [
     'FileSystemConfig',
     'SecurityConfig'
 ]
+    # Add PORT alias for backward compatibility
+    PORT = property(lambda self: self.app_port)
