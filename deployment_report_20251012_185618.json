@@ -1,0 +1,67 @@
+{
+  "deployment_info": {
+    "started_at": "2025-10-12T18:56:15.110039",
+    "completed_at": "2025-10-12T18:56:18.896702",
+    "duration_seconds": 3.786663,
+    "status": "PARTIAL"
+  },
+  "components": {
+    "dependencies": "verified",
+    "security_dirs": "created",
+    "security_system": "deployed",
+    "secure_factory": "failed",
+    "secure_monitoring": "failed",
+    "secure_api": "failed",
+    "integration_tests": "failed"
+  },
+  "summary": {
+    "total_components": 7,
+    "deployed_components": 1,
+    "failed_components": 4,
+    "success_rate": "14.3%"
+  },
+  "deployment_log": [
+    "[18:56:15] \u2139\ufe0f Starting complete secure deployment",
+    "[18:56:15] \u2139\ufe0f Verifying dependencies...",
+    "[18:56:15] \u2705 Python 3.13.7 \u2713",
+    "[18:56:15] \u2705 Package fastapi \u2713",
+    "[18:56:15] \u2705 Package uvicorn \u2713",
+    "[18:56:15] \u2705 Package cryptography \u2713",
+    "[18:56:15] \u26a0\ufe0f Package pyjwt missing",
+    "[18:56:15] \u2705 Package psutil \u2713",
+    "[18:56:15] \u2139\ufe0f Installing missing packages: pyjwt",
+    "[18:56:16] \u2705 Installed pyjwt \u2713",
+    "[18:56:16] \u2139\ufe0f Setting up security directories...",
+    "[18:56:16] \u2705 Security directory permissions set \u2713",
+    "[18:56:16] \u2705 Security directories created \u2713",
+    "[18:56:16] \u2139\ufe0f Deploying enterprise security system...",
+    "[18:56:16] \u2705 Security system authentication test \u2713",
+    "[18:56:16] \u2705 Compliance reporting test \u2713",
+    "[18:56:16] \u2705 Enterprise security system deployed \u2705",
+    "[18:56:16] \u2139\ufe0f Deploying secure agent factory...",
+    "[18:56:18] \u274c Secure agent factory deployment failed: name 'Tuple' is not defined",
+    "[18:56:18] \u2139\ufe0f Deploying secure monitoring system...",
+    "[18:56:18] \u274c Secure monitoring deployment failed: name 'Tuple' is not defined",
+    "[18:56:18] \u2139\ufe0f Deploying secure API endpoints...",
+    "[18:56:18] \u274c Secure API deployment failed: name 'Tuple' is not defined",
+    "[18:56:18] \u2139\ufe0f Running integration tests...",
+    "[18:56:18] \u274c Integration tests failed: name 'Tuple' is not defined",
+    "[18:56:18] \u2139\ufe0f Generating deployment report..."
+  ],
+  "next_steps": [
+    "Start the secure API server: python3 -m uvicorn security_integration_layer:create_secure_api --host 0.0.0.0 --port 8003",
+    "Test authentication: POST to /api/auth/login with admin credentials",
+    "Create secure agents: POST to /api/agents/create with Bearer token",
+    "Monitor system: GET /api/system/status",
+    "Generate compliance reports: GET /api/compliance/gdpr"
+  ],
+  "security_features": [
+    "\u2705 JWT-based authentication",
+    "\u2705 Role-based access control",
+    "\u2705 Comprehensive audit logging",
+    "\u2705 Compliance reporting (GDPR, SOX, HIPAA, ISO27001)",
+    "\u2705 Data encryption at rest",
+    "\u2705 Real-time security monitoring",
+    "\u2705 Risk-based alerting"
+  ]
+}
