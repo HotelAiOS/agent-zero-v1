@@ -642,3 +642,72 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+        
+# V2.0 Production Intelligence Integration
+try:
+    from shared.kaizen import IntelligentModelSelector, TaskContext
+    
+    # Initialize production intelligence
+    model_selector = IntelligentModelSelector()
+    
+    def select_optimal_ai_model(task_description: str, agent_specialization: str, 
+                              priority: str = "balanced") -> str:
+        """Select optimal AI model using V2.0 Intelligence Layer"""
+        
+        context = TaskContext(
+            task_type=f"{agent_specialization.value} {task_description}",
+            priority=priority,
+            project_context=task_description
+        )
+        
+        recommendation = model_selector.select_optimal_model(context)
+        return recommendation['recommended_model']
+    
+    # Enhance agent task execution with intelligent model selection
+    async def _execute_agent_task_v2(self, agent_id: str, task: str, context: Optional[Dict] = None):
+        """Enhanced task execution with V2.0 Intelligence"""
+        
+        agent = self.active_agents[agent_id]
+        template = agent.template
+        
+        try:
+            print(f"🧠 Agent {agent_id} using V2.0 Intelligence Layer")
+            
+            # Use intelligent model selection
+            optimal_model = select_optimal_ai_model(task, template.specialization, "quality")
+            print(f"🎯 Selected optimal model: {optimal_model}")
+            
+            # Execute with selected model
+            full_prompt = f"{template.system_prompt}\n\nTASK: {task}\n\nCONTEXT: {json.dumps(context, indent=2) if context else 'None'}"
+            
+            response = ollama.generate(
+                model=optimal_model,
+                prompt=full_prompt,
+                stream=False
+            )
+            
+            result = response['response'] if 'response' in response else "No response"
+            
+            # Update agent state
+            agent.status = AgentStatus.IDLE
+            agent.current_task = None
+            agent.performance_metrics["tasks_completed"] += 1
+            agent.last_activity = datetime.now()
+            
+            print(f"✅ Agent {agent_id} completed task with V2.0 Intelligence")
+            return result
+            
+        except Exception as e:
+            agent.status = AgentStatus.ERROR
+            print(f"❌ Agent {agent_id} V2.0 execution error: {e}")
+            # Fallback to original method
+            return await self._execute_agent_task_original(agent_id, task, context)
+    
+    print("✅ Agent Zero V2.0 Intelligence Layer integrated with Agent Factory")
+    V2_INTELLIGENCE_AVAILABLE = True
+    
+except ImportError as e:
+    print(f"⚠️ V2.0 Intelligence Layer not available: {e}")
+    V2_INTELLIGENCE_AVAILABLE = False
+        
