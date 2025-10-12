@@ -1,0 +1,244 @@
+# docker-compose.intelligence-v2.yml
+"""
+Agent Zero V1 - Enhanced Docker Compose for Intelligence V2.0 Package
+Extends existing infrastructure with Intelligence V2.0 service while preserving all existing services
+
+CRITICAL: Non-disruptive deployment - all existing services continue to work
+"""
+
+version: '3.8'
+
+services:
+  # === EXISTING SERVICES (PRESERVED) ===
+  # All existing services remain exactly as they were
+  
+  neo4j:
+    image: neo4j:5.15-community
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=none
+      - NEO4J_dbms_memory_heap_initial__size=512m
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "cypher-shell", "--username", "neo4j", "--password", "neo4j", "RETURN 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - neo4j_data:/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=agent_zero
+      - RABBITMQ_DEFAULT_PASS=agent_pass
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # === EXISTING API SERVICE (ENHANCED) ===
+  # Enhanced existing API service to include V2.0 Intelligence router
+  
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.intelligence-v2
+    ports:
+      - "8000:8000"  # Existing port maintained
+    depends_on:
+      - neo4j
+      - redis
+      - rabbitmq
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://agent_zero:agent_pass@rabbitmq:5672/
+      - INTELLIGENCE_V2_ENABLED=true
+      - POINT3_COMPATIBILITY_MODE=true
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./shared:/app/shared:ro
+      - ./intelligence_v2:/app/intelligence_v2:ro
+      - agent_logs:/app/logs
+
+  # === NEW INTELLIGENCE V2.0 SERVICE ===
+  # Dedicated Intelligence V2.0 service for enhanced features
+  
+  intelligence-v2:
+    build:
+      context: .
+      dockerfile: Dockerfile.intelligence-v2-standalone
+    ports:
+      - "8012:8012"  # New port for dedicated V2.0 service
+    depends_on:
+      - neo4j
+      - redis
+      - rabbitmq
+      - api
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://agent_zero:agent_pass@rabbitmq:5672/
+      - SIMPLE_TRACKER_DB_PATH=/app/data/agent-zero.db
+      - INTELLIGENCE_MODE=standalone
+      - API_GATEWAY_URL=http://api:8000
+      - POINT3_SERVICE_URL=http://localhost:8003  # Reference to existing Point 3
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/api/v2/intelligence/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./shared:/app/shared:ro
+      - ./intelligence_v2:/app/intelligence_v2:ro
+      - ./data:/app/data
+      - agent_logs:/app/logs
+
+  # === MONITORING SERVICE (ENHANCED) ===
+  # Enhanced monitoring to track Intelligence V2.0 metrics
+  
+  monitoring:
+    build:
+      context: .
+      dockerfile: Dockerfile.monitoring-v2
+    ports:
+      - "8080:8080"  # Existing WebSocket monitoring port
+    depends_on:
+      - api
+      - intelligence-v2
+    environment:
+      - API_GATEWAY_URL=http://api:8000
+      - INTELLIGENCE_V2_URL=http://intelligence-v2:8012
+      - WEBSOCKET_PORT=8080
+      - MONITORING_INTERVAL=5
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./shared:/app/shared:ro
+      - agent_logs:/app/logs
+
+  # === BACKWARD COMPATIBILITY SERVICE ===
+  # Maintains existing Point 3 service for gradual migration
+  
+  point3-legacy:
+    build:
+      context: .
+      dockerfile: Dockerfile.point3-legacy
+    ports:
+      - "8003:8003"  # Existing Point 3 port preserved
+    depends_on:
+      - neo4j
+      - redis
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - REDIS_URL=redis://redis:6379
+      - COMPATIBILITY_MODE=true
+      - V2_MIGRATION_READY=true
+    networks:
+      - agent-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./shared:/app/shared:ro
+      - agent_logs:/app/logs
+
+networks:
+  agent-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  neo4j_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  agent_logs:
+    driver: local
+
+# === DEPLOYMENT CONFIGURATION ===
+# Configuration for different deployment scenarios
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+# Apply common configurations
+services:
+  neo4j:
+    <<: *restart-policy
+    logging: *default-logging
+    
+  redis:
+    <<: *restart-policy
+    logging: *default-logging
+    
+  rabbitmq:
+    <<: *restart-policy
+    logging: *default-logging
+    
+  api:
+    <<: *restart-policy
+    logging: *default-logging
+    
+  intelligence-v2:
+    <<: *restart-policy
+    logging: *default-logging
+    
+  monitoring:
+    <<: *restart-policy
+    logging: *default-logging
+    
+  point3-legacy:
+    <<: *restart-policy
+    logging: *default-logging

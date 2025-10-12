@@ -1,0 +1,69 @@
+# Dockerfile.intelligence-v2
+"""
+Agent Zero V1 - Intelligence V2.0 Package Dockerfile
+Production-ready container for Intelligence V2.0 with full backward compatibility
+
+CRITICAL: Maintains access to all existing Agent Zero components while adding V2.0 features
+"""
+
+FROM python:3.11-slim
+
+LABEL maintainer="Agent Zero V1 Team"
+LABEL version="2.0.0"
+LABEL description="Intelligence V2.0 Package with Point 3-6 consolidation"
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash agent_zero
+RUN chown -R agent_zero:agent_zero /app
+
+# Copy requirements first for better Docker layer caching
+COPY requirements.intelligence-v2.txt /app/
+RUN pip install --no-cache-dir -r requirements.intelligence-v2.txt
+
+# Copy existing Agent Zero components (for compatibility)
+COPY shared/ /app/shared/
+COPY src/ /app/src/
+COPY simple-tracker.py /app/
+COPY task-decomposer.py /app/
+COPY agent-executor.py /app/
+COPY neo4j-client.py /app/
+
+# Copy Intelligence V2.0 package
+COPY intelligence_v2/ /app/intelligence_v2/
+COPY api/ /app/api/
+
+# Copy application entry point
+COPY intelligence-v2-main.py /app/main.py
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/data /app/config
+RUN chown -R agent_zero:agent_zero /app
+
+# Switch to non-root user
+USER agent_zero
+
+# Environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV INTELLIGENCE_V2_MODE=production
+ENV LOG_LEVEL=INFO
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8012/api/v2/intelligence/health || exit 1
+
+# Expose Intelligence V2.0 port
+EXPOSE 8012
+
+# Start Intelligence V2.0 service
+CMD ["python", "main.py"]

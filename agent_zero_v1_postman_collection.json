@@ -1,0 +1,94 @@
+{
+  "info": {
+    "name": "Agent Zero V1 - Production APIs",
+    "description": "Complete API collection for Agent Zero V1 production servers",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Master Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Master System Integrator APIs",
+      "item": [
+        {
+          "name": "Natural Language Processing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\": \"Create new AI project\", \"user_context\": {\"project_type\": \"AI\"}, \"user_id\": \"postman_test\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/nlp",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "nlp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Team Formation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"project_requirements\": {\"size\": \"medium\", \"technology\": \"AI/ML\", \"duration\": \"3_months\"}, \"user_id\": \"postman_test\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/team",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "team"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,18 +1,30 @@
+
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files: []
 
 scrape_configs:
-  - job_name: 'agent-zero-v2'
+  - job_name: 'agent-zero-services'
     static_configs:
       - targets: 
-          - 'api-gateway:8080'
-          - 'ai-intelligence:8010'
-          - 'websocket-service:8080'
-          - 'agent-orchestrator:8080'
-    scrape_interval: 10s
-
-  - job_name: 'infrastructure'
+          - 'master-integrator:8000'
+          - 'team-formation:8001'
+          - 'analytics:8002'
+          - 'collaboration:8003'
+          - 'predictive:8004'
+          - 'adaptive-learning:8005'
+          - 'quantum-intelligence:8006'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    
+  - job_name: 'api-gateway'
     static_configs:
-      - targets:
-          - 'neo4j:7474'
-          - 'redis:6379'
+      - targets: ['api-gateway:80']
+    metrics_path: '/nginx_status'
+    scrape_interval: 30s
+    
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

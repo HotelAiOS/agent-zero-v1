@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agent Zero V1 - Quick API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        button { margin: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #results { margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 5px; }
+        pre { background: white; padding: 15px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Agent Zero V1 - Quick API Test</h1>
+    <p><strong>Dev B:</strong> Use this to test backend APIs quickly!</p>
+    
+    <div>
+        <button onclick="testHealth()">🔍 Health Check</button>
+        <button onclick="testNLP()">🧠 Test NLP API</button>
+        <button onclick="testTeam()">👥 Test Team API</button>
+        <button onclick="testAnalytics()">📊 Test Analytics API</button>
+        <button onclick="testStatus()">📋 System Status</button>
+    </div>
+    
+    <div id="results">
+        <p>Click buttons above to test Agent Zero V1 APIs...</p>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        async function makeAPICall(endpoint, data = null) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>⏳ Making API call...</p>';
+            
+            try {
+                const options = {
+                    method: data ? 'POST' : 'GET',
+                    headers: {'Content-Type': 'application/json'}
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                const result = await response.json();
+                
+                resultsDiv.innerHTML = `
+                    <h3>✅ API Response (${response.status}):</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <h3>❌ Error:</h3>
+                    <pre>${error.message}</pre>
+                    <p>💡 Service might still be starting up...</p>
+                `;
+            }
+        }
+        
+        function testHealth() {
+            makeAPICall('/health');
+        }
+        
+        function testNLP() {
+            makeAPICall('/api/nlp', {
+                text: "I need help creating an AI project",
+                user_id: "quick_test_user"
+            });
+        }
+        
+        function testTeam() {
+            makeAPICall('/api/team', {
+                project_requirements: {
+                    size: "medium",
+                    technology: "AI/ML", 
+                    duration: "3_months"
+                },
+                user_id: "quick_test_user"
+            });
+        }
+        
+        function testAnalytics() {
+            makeAPICall('/api/analytics', {
+                time_period: "30_days",
+                user_id: "quick_test_user"
+            });
+        }
+        
+        function testStatus() {
+            makeAPICall('/api/status');
+        }
+    </script>
+</body>
+</html>
