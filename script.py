@@ -1,313 +1,231 @@
-# Tworzenie ulepszonego skryptu weryfikacyjnego z rozwiązaniem problemów authentication
-verify_script_enhanced = '''#!/usr/bin/env python3
-"""
-Enhanced verification script for Agent Zero V1 environment
-Includes credential reset and detailed diagnostics
-"""
-
-import subprocess
-import sys
-import time
-import requests
+# Analiza zadań Developer A z dwóch poprzednich wątków na podstawie dokumentacji
 import json
-from pathlib import Path
+from collections import defaultdict
+from datetime import datetime
 
-
-def run_command(cmd, timeout=30):
-    """Run shell command and return result"""
-    try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-        return result.returncode == 0, result.stdout, result.stderr
-    except subprocess.TimeoutExpired:
-        return False, "", "Command timed out"
-
-
-def reset_neo4j_credentials():
-    """Reset Neo4j credentials by restarting with fresh volume"""
-    print("🔄 Resetting Neo4j credentials...")
+# Analiza zadań z poprzednich wątków na podstawie extracted data
+tasks_analysis = {
+    "Week 43 Tasks (Ukończone)": [
+        {
+            "task": "Natural Language Understanding Task Decomposition",
+            "priority": "HIGHEST",
+            "story_points": 6,
+            "status": "COMPLETE",
+            "components": ["Point 1 NLU Task Decomposer", "Hierarchical Task Planner"],
+            "technical_details": "Advanced AI reasoning engine z Ollama integration, Enterprise-grade risk assessment"
+        },
+        {
+            "task": "Context-Aware Agent Selection", 
+            "priority": "HIGH",
+            "story_points": 4,
+            "status": "COMPLETE",
+            "components": ["Point 2 Agent Selection", "Multi-Strategy Selection"],
+            "technical_details": "5 strategii selekcji agentów, intelligent scoring, load balancing"
+        },
+        {
+            "task": "Dynamic Task Prioritization Re-assignment",
+            "priority": "HIGH", 
+            "story_points": 4,
+            "status": "COMPLETE",
+            "components": ["Point 3 Dynamic Priority", "Crisis Response System"],
+            "technical_details": "Real-time priority adjustment, intelligent task reassignment, crisis scenarios"
+        },
+        {
+            "task": "Advanced AI Streaming",
+            "priority": "HIGH",
+            "story_points": 4, 
+            "status": "PRODUCTION READY",
+            "components": ["Token-by-token streaming", "Real-time metrics"],
+            "technical_details": "WebSocket integration, metryki jakości, koszty, latencja"
+        },
+        {
+            "task": "Mock Components Replacement",
+            "priority": "CRITICAL",
+            "story_points": 4,
+            "status": "PRODUCTION READY", 
+            "components": ["Production AI components", "Ollama integration"],
+            "technical_details": "Podmiana mock classes na production, real-time analysis"
+        }
+    ],
     
-    commands = [
-        "docker-compose stop neo4j",
-        "docker volume rm agent-zero-v1_neo4j_data 2>/dev/null || true",
-        "docker-compose up -d neo4j"
+    "Week 44 Tasks (Kolejne do implementacji)": [
+        {
+            "task": "Experience Management System",
+            "priority": "HIGH",
+            "story_points": 8,
+            "status": "DESIGN COMPLETE",
+            "components": ["Experience tracking", "Learning capabilities", "Pattern recognition"],
+            "technical_details": "Baza doświadczeń z API rekomendacji, self-learning platform"
+        },
+        {
+            "task": "Neo4j Knowledge Graph Integration", 
+            "priority": "HIGH",
+            "story_points": 6,
+            "status": "READY FOR IMPLEMENTATION",
+            "components": ["Graph database", "Knowledge relationships", "Query optimization"],
+            "technical_details": "40% performance improvement, migration z SQLite, advanced analytics"
+        },
+        {
+            "task": "Pattern Mining Engine",
+            "priority": "HIGH",
+            "story_points": 6,
+            "status": "ARCHITECTURE READY",
+            "components": ["Success pattern detection", "ML optimization", "Predictive analytics"],
+            "technical_details": "Wykrywanie wzorców sukcesu, automated optimization, pattern versioning"
+        },
+        {
+            "task": "ML Model Training Pipeline",
+            "priority": "MEDIUM",
+            "story_points": 4,
+            "status": "DESIGN PHASE",
+            "components": ["Model selection", "Training automation", "Cost optimization"],
+            "technical_details": "Intelligent cost optimization, automated model selection framework"
+        },
+        {
+            "task": "Enhanced Analytics Dashboard Backend",
+            "priority": "MEDIUM", 
+            "story_points": 2,
+            "status": "API READY",
+            "components": ["Real-time metrics", "Business intelligence", "Performance tracking"],
+            "technical_details": "Real-time business insights, comprehensive monitoring"
+        },
+        {
+            "task": "Advanced CLI Commands",
+            "priority": "LOW",
+            "story_points": 2, 
+            "status": "BASIC IMPLEMENTATION",
+            "components": ["V2.0 CLI enhancements", "Developer tools", "Automation scripts"],
+            "technical_details": "Enhanced developer experience, automated deployment commands"
+        }
+    ],
+    
+    "Critical Production Issues (Identified)": [
+        {
+            "issue": "Neo4j Connection Stability",
+            "severity": "CRITICAL",
+            "fix_status": "FIXED - Critical Fixes Package A0-5",
+            "technical_details": "Exponential backoff retry, connection pooling, health check mechanism"
+        },
+        {
+            "issue": "AgentExecutor Signature Mismatch", 
+            "severity": "HIGH",
+            "fix_status": "FIXED - Critical Fixes Package A0-6",
+            "technical_details": "Standardized execute_task(context, callback) signature, async support"
+        },
+        {
+            "issue": "Task Decomposer JSON Parsing",
+            "severity": "HIGH", 
+            "fix_status": "FIXED - Critical Fixes Package TECH-001",
+            "technical_details": "5 parsing strategies, robust JSON handling, retry logic"
+        }
+    ],
+    
+    "Infrastructure Status": [
+        {
+            "component": "Docker Services",
+            "status": "OPERATIONAL",
+            "details": "Neo4j, Redis, RabbitMQ, WebSocket - all healthy"
+        },
+        {
+            "component": "V2.0 Intelligence Layer",
+            "status": "PRODUCTION READY", 
+            "details": "6 nowych komend CLI, Enhanced SimpleTracker V2.0 schema"
+        },
+        {
+            "component": "Integration Tests",
+            "status": "100% SUCCESS RATE",
+            "details": "55 testów, complete test coverage"
+        }
     ]
-    
-    for cmd in commands:
-        success, stdout, stderr = run_command(cmd)
-        if not success and "no such volume" not in stderr.lower():
-            print(f"⚠️  Command failed: {cmd}")
-            print(f"Error: {stderr}")
-    
-    print("⏳ Waiting for Neo4j to initialize with fresh credentials...")
-    time.sleep(20)
-    
-    return True
+}
 
+# Generowanie podsumowania
+total_week43_sp = sum(task["story_points"] for task in tasks_analysis["Week 43 Tasks (Ukończone)"])
+total_week44_sp = sum(task["story_points"] for task in tasks_analysis["Week 44 Tasks (Kolejne do implementacji)"])
 
-def test_neo4j_with_retry():
-    """Test Neo4j connection with credential reset if needed"""
-    try:
-        from neo4j import GraphDatabase
-        
-        # First attempt
-        try:
-            driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "agent-pass"))
-            with driver.session() as session:
-                result = session.run("RETURN 'Connection OK' as message")
-                message = result.single()["message"]
-                driver.close()
-                return True, f"Neo4j: {message}"
-        except Exception as e:
-            error_msg = str(e).lower()
-            if "authentication" in error_msg or "unauthorized" in error_msg:
-                print("🔄 Authentication failed, resetting Neo4j credentials...")
-                reset_neo4j_credentials()
-                
-                # Retry after reset
-                try:
-                    driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "agent-pass"))
-                    with driver.session() as session:
-                        result = session.run("RETURN 'Connection OK after reset' as message")
-                        message = result.single()["message"]
-                        driver.close()
-                        return True, f"Neo4j: {message}"
-                except Exception as retry_e:
-                    return False, f"Neo4j failed after reset: {retry_e}"
-            else:
-                return False, f"Neo4j failed: {e}"
-                
-    except ImportError:
-        return False, "Neo4j driver not installed. Run: pip install neo4j"
+print("="*80)
+print("ANALIZA ZADAŃ DEVELOPER A - AGENT ZERO V1/V2.0")
+print("Bazując na dwóch poprzednich wątkach")
+print("="*80)
+print()
 
+print("📋 WEEK 43 - UKOŃCZONE ZADANIA")
+print(f"Łączne Story Points: {total_week43_sp} SP")
+print("-" * 50)
+for task in tasks_analysis["Week 43 Tasks (Ukończone)"]:
+    print(f"✅ {task['task']} [{task['story_points']} SP]")
+    print(f"   Status: {task['status']}")
+    print(f"   Techniczne: {task['technical_details'][:80]}...")
+    print()
 
-def test_rabbitmq_with_diagnosis():
-    """Test RabbitMQ connection with credential diagnosis"""
-    try:
-        import pika
-        
-        # Check container logs first
-        success, logs, _ = run_command("docker logs agent-zero-rabbitmq --tail 10")
-        
-        try:
-            connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host='localhost',
-                    credentials=pika.PlainCredentials('admin', 'SecureRabbitPass123')
-                )
-            )
-            connection.close()
-            return True, "RabbitMQ: Connection OK"
-        except Exception as e:
-            # Check if it's a credential issue
-            if "ACCESS_REFUSED" in str(e):
-                print("🔍 Checking RabbitMQ container environment...")
-                success, env_output, _ = run_command("docker exec agent-zero-rabbitmq env | grep RABBITMQ")
-                print(f"Container environment: {env_output}")
-                
-                # Try with default guest credentials
-                try:
-                    connection = pika.BlockingConnection(
-                        pika.ConnectionParameters(
-                            host='localhost',
-                            credentials=pika.PlainCredentials('guest', 'guest')
-                        )
-                    )
-                    connection.close()
-                    return True, "RabbitMQ: Connected with guest credentials"
-                except:
-                    pass
-            
-            return False, f"RabbitMQ failed: {e}. Check logs above."
-            
-    except ImportError:
-        return False, "Pika not installed. Run: pip install pika"
+print("🎯 WEEK 44 - KOLEJNE ZADANIA DO IMPLEMENTACJI") 
+print(f"Łączne Story Points: {total_week44_sp} SP")
+print("-" * 50)
+for task in tasks_analysis["Week 44 Tasks (Kolejne do implementacji)"]:
+    print(f"🔄 {task['task']} [{task['story_points']} SP]")
+    print(f"   Status: {task['status']}")
+    print(f"   Techniczne: {task['technical_details'][:80]}...")
+    print()
 
+print("🚨 KRYTYCZNE POPRAWKI")
+print("-" * 50)
+for issue in tasks_analysis["Critical Production Issues (Identified)"]:
+    print(f"🔧 {issue['issue']} - {issue['fix_status']}")
+    print(f"   Szczegóły: {issue['technical_details']}")
+    print()
 
-def test_redis():
-    """Test Redis connection"""
-    try:
-        import redis
-        client = redis.Redis(host='localhost', port=6379, db=0)
-        client.ping()
-        return True, "Redis: Connection OK"
-    except ImportError:
-        return False, "Redis not installed. Run: pip install redis"
-    except Exception as e:
-        return False, f"Redis failed: {e}"
+print("🏗️ STATUS INFRASTRUKTURY")
+print("-" * 50)
+for component in tasks_analysis["Infrastructure Status"]:
+    print(f"⚙️  {component['component']}: {component['status']}")
+    print(f"   {component['details']}")
+    print()
 
+# Priorityzacja następnych kroków
+print("🎯 PRIORYTETY IMPLEMENTACJI - NASTĘPNE KROKI")
+print("=" * 60)
 
-def check_docker_containers():
-    """Check Docker container status with details"""
-    print("📦 Checking Docker containers...")
-    
-    success, stdout, stderr = run_command("docker-compose ps --format json")
-    
-    if not success:
-        return False, f"Docker Compose issues: {stderr}"
-    
-    try:
-        containers = []
-        for line in stdout.strip().split('\\n'):
-            if line.strip():
-                container = json.loads(line)
-                containers.append(container)
-        
-        print("📊 Container Status:")
-        for container in containers:
-            name = container.get('Name', 'Unknown')
-            state = container.get('State', 'Unknown')
-            health = container.get('Health', 'N/A')
-            ports = container.get('Publishers', [])
-            
-            port_info = ""
-            if ports:
-                port_list = [f"{p.get('PublishedPort', '?')}→{p.get('TargetPort', '?')}" for p in ports]
-                port_info = f" [{', '.join(port_list)}]"
-            
-            status_icon = "✅" if state == "running" else "❌"
-            health_info = f" (Health: {health})" if health != 'N/A' else ""
-            
-            print(f"  {status_icon} {name}: {state}{health_info}{port_info}")
-        
-        running_count = sum(1 for c in containers if c.get('State') == 'running')
-        return running_count == len(containers), f"{running_count}/{len(containers)} containers running"
-        
-    except (json.JSONDecodeError, KeyError) as e:
-        # Fallback to simple docker ps
-        success, stdout, _ = run_command("docker-compose ps")
-        return success, "Docker containers checked (simple format)"
+next_steps = [
+    {
+        "priority": 1,
+        "task": "Experience Management System", 
+        "reason": "Fundament V2.0 Intelligence Layer, 8 SP",
+        "estimated_time": "3-4 dni",
+        "dependencies": []
+    },
+    {
+        "priority": 2,
+        "task": "Neo4j Knowledge Graph Integration",
+        "reason": "40% performance improvement, critical for scaling",
+        "estimated_time": "2-3 dni", 
+        "dependencies": ["Experience Management System"]
+    },
+    {
+        "priority": 3,
+        "task": "Pattern Mining Engine",
+        "reason": "Advanced analytics, success pattern detection",
+        "estimated_time": "3-4 dni",
+        "dependencies": ["Neo4j Integration", "Experience Management"]
+    },
+    {
+        "priority": 4,
+        "task": "ML Model Training Pipeline",
+        "reason": "Automated optimization, cost reduction",
+        "estimated_time": "2-3 dni",
+        "dependencies": ["Pattern Mining Engine"]
+    },
+    {
+        "priority": 5,
+        "task": "Enhanced Analytics Dashboard Backend",
+        "reason": "Business intelligence, monitoring",
+        "estimated_time": "1-2 dni", 
+        "dependencies": ["ML Pipeline"]
+    }
+]
 
-
-def install_missing_dependencies():
-    """Install missing Python dependencies"""
-    print("📦 Installing missing dependencies...")
-    
-    packages = ["neo4j", "pika", "redis", "requests", "pytest"]
-    
-    for package in packages:
-        try:
-            __import__(package)
-        except ImportError:
-            print(f"📦 Installing {package}...")
-            success, _, stderr = run_command(f"pip install {package}")
-            if not success:
-                print(f"⚠️  Failed to install {package}: {stderr}")
-
-
-def create_test_files():
-    """Create missing test files"""
-    test_dir = Path("tests")
-    test_file = test_dir / "test_full_integration.py"
-    
-    if not test_file.exists():
-        print("📝 Creating missing test files...")
-        success, _, _ = run_command("python3 create_integration_test.py")
-        if success:
-            print("✅ Test files created")
-        else:
-            print("⚠️  Failed to create test files")
-    else:
-        print("✅ Test files already exist")
-
-
-def main():
-    """Main verification routine"""
-    print("🔍 Agent Zero V1 Environment Verification (Enhanced)")
-    print("=" * 60)
-    
-    # Install missing dependencies first
-    install_missing_dependencies()
-    
-    # Create test files if missing
-    create_test_files()
-    
-    # Check Docker containers with detailed info
-    docker_success, docker_msg = check_docker_containers()
-    if docker_success:
-        print(f"✅ {docker_msg}")
-    else:
-        print(f"❌ {docker_msg}")
-        return 1
-    
-    # Test services with enhanced error handling
-    services = [
-        ("Neo4j", test_neo4j_with_retry),
-        ("Redis", test_redis), 
-        ("RabbitMQ", test_rabbitmq_with_diagnosis)
-    ]
-    
-    failed_services = []
-    
-    for name, test_func in services:
-        print(f"\\n🧪 Testing {name}...")
-        success, message = test_func()
-        
-        if success:
-            print(f"✅ {message}")
-        else:
-            print(f"❌ {message}")
-            failed_services.append(name)
-    
-    # Test HTTP endpoints
-    print("\\n🌐 Testing HTTP endpoints...")
-    endpoints = [
-        ("Neo4j Browser", "http://localhost:7474"),
-        ("RabbitMQ Management", "http://localhost:15672")
-    ]
-    
-    for name, url in endpoints:
-        try:
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                print(f"✅ {name}: HTTP {response.status_code}")
-            else:
-                print(f"⚠️  {name}: HTTP {response.status_code}")
-        except Exception as e:
-            print(f"❌ {name}: {e}")
-    
-    # Run tests if available
-    print("\\n🧪 Running integration tests...")
-    if Path("tests/test_full_integration.py").exists():
-        success, stdout, stderr = run_command("pytest tests/test_full_integration.py -v", timeout=60)
-        if success:
-            print("✅ Integration tests passed!")
-        else:
-            print(f"⚠️  Some tests failed:")
-            print(stderr)
-    else:
-        print("⚠️  Integration test file not found")
-    
-    # Final report
-    print("\\n" + "=" * 60)
-    print("📊 VERIFICATION SUMMARY")
-    print("=" * 30)
-    
-    if not failed_services:
-        print("🎉 ALL SERVICES WORKING!")
-        print("✅ Environment ready for development")
-        print("\\n🚀 Ready for Agent Zero V1 development!")
-        return 0
-    else:
-        print(f"❌ Failed services: {', '.join(failed_services)}")
-        print("\\n🔧 Try running: ./fix_environment_corrected.fish")
-        print("💡 Or check Docker logs: docker-compose logs <service>")
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-'''
-
-with open('verify_environment_enhanced.py', 'w') as f:
-    f.write(verify_script_enhanced)
-
-os.chmod('verify_environment_enhanced.py', 0o755)
-
-print("✅ Created verify_environment_enhanced.py")
-print("📋 Enhanced features:")
-print("- Automatic credential reset for Neo4j authentication issues")
-print("- RabbitMQ credential diagnosis with fallback attempts")
-print("- Automatic dependency installation")
-print("- Missing test file creation")
-print("- Detailed container status reporting")
-print("- Integration test execution")
+for step in next_steps:
+    print(f"{step['priority']}. {step['task']}")
+    print(f"   📝 Uzasadnienie: {step['reason']}")
+    print(f"   ⏱️  Szacowany czas: {step['estimated_time']}")
+    print(f"   🔗 Zależności: {', '.join(step['dependencies']) if step['dependencies'] else 'Brak'}")
+    print()

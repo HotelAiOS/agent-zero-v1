@@ -1,0 +1,105 @@
+{
+  "test_timestamp": "2025-10-12T09:01:58.121791",
+  "total_tests": 16,
+  "passed_tests": 12,
+  "failed_tests": 3,
+  "warnings": 1,
+  "details": [
+    {
+      "test": "Import Enhanced Experience Tracker",
+      "status": "PASSED",
+      "component": "Enhanced Experience Tracker",
+      "module": "shared.experience.enhanced_tracker"
+    },
+    {
+      "test": "Experience Tracking",
+      "status": "PASSED",
+      "insights_count": 2,
+      "experience_id": "exp_eec5402f7992"
+    },
+    {
+      "test": "ML Insights Generation",
+      "status": "PASSED",
+      "insights_generated": 2
+    },
+    {
+      "test": "Import Experience Management API",
+      "status": "FAILED",
+      "error": "No module named 'fastapi'",
+      "component": "Experience Management API"
+    },
+    {
+      "test": "Import AgentZero Graph Schema",
+      "status": "PASSED",
+      "component": "AgentZero Graph Schema",
+      "module": "shared.knowledge.graph_integration_v2"
+    },
+    {
+      "test": "Import SQLite to Neo4j Migrator",
+      "status": "PASSED",
+      "component": "SQLite to Neo4j Migrator",
+      "module": "shared.knowledge.graph_integration_v2"
+    },
+    {
+      "test": "Import Optimized Graph Queries",
+      "status": "PASSED",
+      "component": "Optimized Graph Queries",
+      "module": "shared.knowledge.graph_integration_v2"
+    },
+    {
+      "test": "Neo4j Schema Initialization",
+      "status": "PASSED",
+      "schema_version": "2.0.0",
+      "setup_time_ms": 0.054
+    },
+    {
+      "test": "Import Pattern Mining Engine",
+      "status": "PASSED",
+      "component": "Pattern Mining Engine",
+      "module": "shared.learning.pattern_mining_engine"
+    },
+    {
+      "test": "Pattern Detection",
+      "status": "PASSED",
+      "patterns_discovered": 0
+    },
+    {
+      "test": "Import Pattern Types",
+      "status": "PASSED",
+      "component": "Pattern Types",
+      "module": "shared.learning.pattern_mining_engine"
+    },
+    {
+      "test": "Import ML Training Pipeline",
+      "status": "PASSED",
+      "component": "ML Training Pipeline",
+      "module": "shared.learning.ml_training_pipeline"
+    },
+    {
+      "test": "ML Model Training",
+      "status": "FAILED",
+      "error": "Unexpected result format"
+    },
+    {
+      "test": "Model Prediction",
+      "status": "WARNING",
+      "message": "Unexpected prediction result"
+    },
+    {
+      "test": "Import Analytics Dashboard API",
+      "status": "FAILED",
+      "error": "No module named 'fastapi'",
+      "component": "Analytics Dashboard API"
+    },
+    {
+      "test": "End-to-End Workflow",
+      "status": "PASSED",
+      "workflow_steps": [
+        "Experience Tracking",
+        "Pattern Discovery",
+        "Model Training Pipeline"
+      ],
+      "components_available": 7
+    }
+  ]
+}
