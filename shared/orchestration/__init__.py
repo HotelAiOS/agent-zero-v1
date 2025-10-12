@@ -1,37 +1,4 @@
-"""
-Orchestration Module - Team coordination and task management  
-"""
+# Agent Zero V2.0 Orchestration Module
+from .dynamic_workflow_optimizer import DynamicWorkflowOptimizer
 
-from .task_decomposer import (
-    Task,
-    TaskPriority, 
-    TaskStatus,
-    TaskDependency,
-    TaskDecomposer,
-    TaskType
-)
-
-from .team_builder import (
-    TeamBuilder,
-    TeamComposition,
-    TeamMember
-)
-
-from .planner import (
-    IntelligentPlanner,
-    ProjectPlan
-)
-
-__all__ = [
-    'Task',
-    'TaskPriority',
-    'TaskStatus', 
-    'TaskDependency',
-    'TaskDecomposer',
-    'TaskType',
-    'TeamBuilder',
-    'TeamComposition',
-    'TeamMember',
-    'IntelligentPlanner',
-    'ProjectPlan'
-]
+__all__ = ["DynamicWorkflowOptimizer"]
