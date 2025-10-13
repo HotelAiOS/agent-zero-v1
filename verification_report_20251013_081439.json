@@ -1,0 +1,553 @@
+{
+  "verification_date": "2025-10-13T08:14:39.936747",
+  "essential_files": {
+    "src/": {
+      "description": "Core source directory",
+      "type": "directory",
+      "size_mb": 0.16,
+      "file_count": 62
+    },
+    "src/core/": {
+      "description": "Core system components",
+      "type": "directory",
+      "size_mb": 0.01,
+      "file_count": 4
+    },
+    "src/agents/": {
+      "description": "Agent system",
+      "type": "directory",
+      "size_mb": 0.0,
+      "file_count": 3
+    },
+    "src/api/": {
+      "description": "API layer",
+      "type": "directory",
+      "size_mb": 0.0,
+      "file_count": 5
+    },
+    "src/intelligence/": {
+      "description": "Intelligence layer V2.0",
+      "type": "directory",
+      "size_mb": 0.0,
+      "file_count": 5
+    },
+    "src/database/": {
+      "description": "Database integration",
+      "type": "directory",
+      "size_mb": 0.0,
+      "file_count": 5
+    },
+    "src/websocket/": {
+      "description": "WebSocket service",
+      "type": "directory",
+      "size_mb": 0.0,
+      "file_count": 2
+    },
+    "config/": {
+      "description": "Configuration files",
+      "type": "directory",
+      "size_mb": 0.01,
+      "file_count": 6
+    },
+    "docker-compose.yml": {
+      "description": "Docker orchestration",
+      "type": "file",
+      "size_mb": 0.0,
+      "file_count": 1
+    },
+    "requirements.txt": {
+      "description": "Python dependencies",
+      "type": "file",
+      "size_mb": 0.0,
+      "file_count": 1
+    },
+    ".env.example": {
+      "description": "Environment template",
+      "type": "file",
+      "size_mb": 0.0,
+      "file_count": 1
+    },
+    "README.md": {
+      "description": "Main documentation",
+      "type": "file",
+      "size_mb": 0.01,
+      "file_count": 1
+    },
+    "docs/": {
+      "description": "Documentation directory",
+      "type": "directory",
+      "size_mb": 0.0,
+      "file_count": 1
+    },
+    "tests/": {
+      "description": "Test suite",
+      "type": "directory",
+      "size_mb": 0.1,
+      "file_count": 22
+    },
+    "scripts/": {
+      "description": "Utility scripts",
+      "type": "directory",
+      "size_mb": 0.07,
+      "file_count": 28
+    },
+    "run.py": {
+      "description": "Main entry point",
+      "type": "file",
+      "size_mb": 0.0,
+      "file_count": 1
+    },
+    "cli.py": {
+      "description": "Command line interface",
+      "type": "file",
+      "size_mb": 0.0,
+      "file_count": 1
+    }
+  },
+  "suspicious_files": {
+    "tests/test_business_parser.py.backup": {
+      "pattern": "*backup*",
+      "description": "Backup files",
+      "size_mb": 0.02,
+      "type": "file"
+    },
+    "scripts/backup": {
+      "pattern": "*backup*",
+      "description": "Backup files",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "src/core/agent_executor_backup.py": {
+      "pattern": "*backup*",
+      "description": "Backup files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "scripts/backup/backup_all.sh": {
+      "pattern": "*backup*",
+      "description": "Backup files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "scripts/backup/verify_backup.sh": {
+      "pattern": "*backup*",
+      "description": "Backup files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "services/ai-router/src/main.py.backup": {
+      "pattern": "*backup*",
+      "description": "Backup files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "env-template.txt": {
+      "pattern": "*temp*",
+      "description": "Temporary files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "templates": {
+      "pattern": "*temp*",
+      "description": "Temporary files",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "config/agent_templates": {
+      "pattern": "*temp*",
+      "description": "Temporary files",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "infrastructure/helm/agent-zero/templates": {
+      "pattern": "*temp*",
+      "description": "Temporary files",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "tests/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "api/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "app/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "src/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "src/core/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "app/ai/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "app/api/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "api/routes/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "api/v2/__pycache__": {
+      "pattern": "__pycache__/",
+      "description": "Python cache",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    "test_verbose.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "agent_communications.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "agent_execution.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "test_output.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.05,
+      "type": "file"
+    },
+    "brain.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "v2_deployment.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "v2_installation_20251010_203550.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "v2_installation_20251010_203619.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "v2_installation_20251010_204412.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "system.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "dashboard.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "integrated-system.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "server.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "enterprise_real_integration_fixed.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "complete_system_build.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "dynamic_prioritization.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "dynamic_prioritization_fixed.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "ultimate_ai_human_collaboration.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "unified_system_manager.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "intelligent_agent_selection.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "experience_management.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_082625.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_084541.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_085100.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.03,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_085715.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.03,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_090338.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.03,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_090753.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.01,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_091309.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.03,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_091847.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.03,
+      "type": "file"
+    },
+    "agent_zero_deployment_20251012_092442.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.03,
+      "type": "file"
+    },
+    "agent_zero_test_results_20251012_094202.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "agent_zero_test_results_20251012_094850.log": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "docker_troubleshoot_logs.sh": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    },
+    "logs": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "directory"
+    },
+    ".git/logs": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.04,
+      "type": "directory"
+    },
+    "services/api-gateway/src/middleware/logging.py": {
+      "pattern": "*log*",
+      "description": "Log files",
+      "size_mb": 0.0,
+      "type": "file"
+    }
+  },
+  "missing_critical": {},
+  "recommendations": [
+    {
+      "severity": "INFO",
+      "category": "Status",
+      "message": "Repository looks clean and ready for GitHub",
+      "action": "Proceed with git push"
+    }
+  ],
+  "git_status": {
+    "current_branch": "main",
+    "total_changes": 1599,
+    "untracked_files": 25,
+    "modified_files": 1,
+    "added_files": 0,
+    "status_detail": [
+      "M .gitignore",
+      " D =0.104.0",
+      " D =0.13.0",
+      " D =0.24.0",
+      " D =1.24.0",
+      " D =1.3.0",
+      " D =2.0.0",
+      " D =23.0.0",
+      " D =5.0.0",
+      " D _cleanup_review/backup_files/docker-compose.yml.bak_20251010_121942",
+      " D _cleanup_review/backup_files/docker-compose.yml.bak_20251010_122934",
+      " D _cleanup_review/cleanup_log.txt",
+      " D _cleanup_review/database_files/agent_zero.db",
+      " D _cleanup_review/database_files/agent_zero_learning.db",
+      " D _cleanup_review/database_files/project_orchestrator_standalone.db",
+      " D _cleanup_review/old_configs/docker-compose-fixed.yml",
+      " D _cleanup_review/old_configs/docker-compose-phase1-backup.yml",
+      " D _cleanup_review/old_configs/docker-compose.dev.yml",
+      " D agent-zero-v1-integrated/.env",
+      " D agent-zero-v1-integrated/Dockerfile"
+    ]
+  },
+  "size_analysis": {
+    "total_directories": 26,
+    "largest_directories": [
+      [
+        "services",
+        {
+          "size_mb": 0.27,
+          "file_count": 182
+        }
+      ],
+      [
+        "src",
+        {
+          "size_mb": 0.16,
+          "file_count": 62
+        }
+      ],
+      [
+        "tests",
+        {
+          "size_mb": 0.1,
+          "file_count": 22
+        }
+      ],
+      [
+        "scripts",
+        {
+          "size_mb": 0.07,
+          "file_count": 28
+        }
+      ],
+      [
+        "exported-assets",
+        {
+          "size_mb": 0.06,
+          "file_count": 10
+        }
+      ],
+      [
+        "api",
+        {
+          "size_mb": 0.05,
+          "file_count": 22
+        }
+      ],
+      [
+        "infrastructure",
+        {
+          "size_mb": 0.04,
+          "file_count": 73
+        }
+      ],
+      [
+        "exported-assets (1)",
+        {
+          "size_mb": 0.03,
+          "file_count": 9
+        }
+      ],
+      [
+        "config",
+        {
+          "size_mb": 0.01,
+          "file_count": 6
+        }
+      ],
+      [
+        "docs",
+        {
+          "size_mb": 0.0,
+          "file_count": 1
+        }
+      ]
+    ],
+    "total_size_mb": 0.79
+  }
+}

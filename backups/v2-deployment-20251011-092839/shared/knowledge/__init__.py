@@ -1,1 +1,0 @@
-"""Agent Zero V1 - Knowledge Components"""

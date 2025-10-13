@@ -1,6 +1,0 @@
-fastapi
-uvicorn
-neo4j
-pika
-httpx
-ollama

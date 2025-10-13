@@ -1,3 +1,0 @@
-# Agent Factory Dependencies
-pyyaml>=6.0.1
-python-dateutil>=2.8.2
