@@ -1,1 +1,0 @@
-exec(open('deployment-package-creator.py').read())

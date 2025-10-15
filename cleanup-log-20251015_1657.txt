@@ -1,0 +1,23 @@
+=== AGENT ZERO V1 - SAFE REPOSITORY CLEANUP ===
+Data: śro, 15 paź 2025, 16:57:09 CEST
+
+Quarantine directory: /home/ianua/agent-zero-v1-quarantine-20251015_1657
+
+2. MOVING BROKEN FILES TO QUARANTINE...
+
+3. ORGANIZING DATABASES...
+
+4. REMOVING TEMPORARY FILES...
+  Removed PID files and temp files
+
+5. ARCHIVING EXPORTED ASSETS...
+  Moved exported assets to archive/
+
+=== CLEANUP SUMMARY ===
+Files in quarantine: 0
+Quarantine location: /home/ianua/agent-zero-v1-quarantine-20251015_1657
+
+Next steps:
+1. Review quarantined files: ls -lh /home/ianua/agent-zero-v1-quarantine-20251015_1657
+2. If cleanup successful, delete quarantine: rm -rf /home/ianua/agent-zero-v1-quarantine-20251015_1657
+3. Commit cleaned repository: git add -A && git commit -m 'Repository cleanup'
